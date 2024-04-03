@@ -14,9 +14,8 @@ def read_json(split='dev'):
 def preprocess(split='dev'):
     """lowering and tokenization of sentences"""
     data = read_json(split)
-    for pair in data[:5]:
+    for pair in data:
         pair['sentence1_t'] = list(nlp(pair['sentence1'].lower()))
         pair['sentence2_t'] = list(nlp(pair['sentence2'].lower()))
-    print(data[0])
     return data
 preprocess()
