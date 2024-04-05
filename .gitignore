@@ -1,3 +1,9 @@
+# Ignore slurm output files
+*.out
+
+# Ignore job submission scripts
+*.job
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
