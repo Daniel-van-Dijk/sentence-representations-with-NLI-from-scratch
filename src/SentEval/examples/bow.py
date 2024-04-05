@@ -15,9 +15,9 @@ import logging
 
 # Set PATHs
 PATH_TO_SENTEVAL = '../'
-PATH_TO_DATA = '../data'
-# PATH_TO_VEC = 'glove/glove.840B.300d.txt'
-PATH_TO_VEC = 'fasttext/crawl-300d-2M.vec'
+PATH_TO_DATA = '../data/'
+PATH_TO_VEC = '../pretrained/glove.840B.300d.txt'
+#PATH_TO_VEC = 'fasttext/crawl-300d-2M.vec'
 
 # import SentEval
 sys.path.insert(0, PATH_TO_SENTEVAL)
@@ -93,20 +93,36 @@ def batcher(params, batch):
 
 
 # Set params for SentEval
-params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': True, 'kfold': 5}
-params_senteval['classifier'] = {'nhid': 0, 'optim': 'rmsprop', 'batch_size': 128,
-                                 'tenacity': 3, 'epoch_size': 2}
+params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 2}
+# params_senteval['classifier'] = {'nhid': 0, 'optim': 'rmsprop', 'batch_size': 128,
+#                                  'tenacity': 3, 'epoch_size': 2}
 
 # Set up logger
 logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.DEBUG)
 
 if __name__ == "__main__":
     se = senteval.engine.SE(params_senteval, batcher, prepare)
-    transfer_tasks = ['STS12', 'STS13', 'STS14', 'STS15', 'STS16',
-                      'MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC',
-                      'SICKEntailment', 'SICKRelatedness', 'STSBenchmark',
-                      'Length', 'WordContent', 'Depth', 'TopConstituents',
-                      'BigramShift', 'Tense', 'SubjNumber', 'ObjNumber',
-                      'OddManOut', 'CoordinationInversion']
+    # transfer_tasks = ['STS12', 'STS13', 'STS14', 'STS15', 'STS16',
+    #                   'MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC',
+    #                   'SICKEntailment', 'SICKRelatedness', 'STSBenchmark',
+    #                   'Length', 'WordContent', 'Depth', 'TopConstituents',
+    #                   'BigramShift', 'Tense', 'SubjNumber', 'ObjNumber',
+    #                   'OddManOut', 'CoordinationInversion']
+    
+    # transfer_tasks = ['STS12', 'STS13', 'STS14', 'STS15', 'STS16',
+    #                     'CR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC',
+    #                 'SICKEntailment', 'SICKRelatedness', 'STSBenchmark',
+    #                 'Length', 'WordContent', 'Depth', 'TopConstituents',
+    #                 'BigramShift', 'Tense', 'SubjNumber', 'ObjNumber',
+    #                 'OddManOut', 'CoordinationInversion']
+
+     # here you define the NLP taks that your embedding model is going to be evaluated
+    # in (https://arxiv.org/abs/1802.05883) we use the following :
+    # SICKRelatedness (Sick-R) needs torch cuda to work (even when using logistic regression), 
+    # but STS14 (semantic textual similarity) is a similar type of semantic task
+    #transfer_tasks = ['MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'TREC',
+    #                  'MRPC', 'SICKEntailment', 'STS14']
+    transfer_tasks = ['MR', 'CR']
+    # senteval prints the results and returns a dictionary with the scores
     results = se.eval(transfer_tasks)
     print(results)
