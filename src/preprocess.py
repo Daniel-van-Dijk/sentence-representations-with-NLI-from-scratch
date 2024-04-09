@@ -28,7 +28,6 @@ def preprocess(split='dev'):
     data = read_json(split)
     preprocessed = []
 
-    labels = []
     # TODO: ask labels = ['neutral', 'entailment', 'contradiction', '-']
     labels = ['neutral', 'entailment', 'contradiction']
     start = time.time()
@@ -41,6 +40,7 @@ def preprocess(split='dev'):
     print(f" It took {(end - start):.2f} seconds to tokenize {split} split")
     return preprocessed
 
+# Below is taken from assignment 2 of NLP1 
 
 class OrderedCounter(Counter, OrderedDict):
   """Counter that remembers the order elements are first seen"""
@@ -79,13 +79,3 @@ class Vocabulary:
     for tok, freq in tok_freq:
       if freq >= min_freq:
         self.add_token(tok)
-
-# v = Vocabulary()
-
-# train_data = preprocess()
-# for ex in train_data:
-#     for token in ex['sentence_1'] + ex['sentence_2']:
-#       v.count_token(token)
-
-# v.build()
-# print("Vocabulary size:", len(v.w2i))
