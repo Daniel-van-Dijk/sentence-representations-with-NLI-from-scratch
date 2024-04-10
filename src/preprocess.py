@@ -4,6 +4,10 @@ import time
 from spacy.lang.en import English
 import numpy as np
 
+import torch
+from torch.utils.data import Dataset
+import torch.nn as nn
+
 def read_json(split='dev'):
     data = []
     with open(f"../data/snli_1.0/snli_1.0_{split}.jsonl", 'r') as json_file:
@@ -28,8 +32,10 @@ def preprocess(split='dev'):
   
     for pair in data:
         if pair['gold_label'] in labels:
-            preprocessed.append({'sentence_1' : list(tokenizer(pair['sentence1'].lower())), 
-                                'sentence_2' : list(tokenizer(pair['sentence2'].lower())), 
+            sent1 = list(tokenizer(pair['sentence1'].lower()))
+            sent2 = list(tokenizer(pair['sentence2'].lower()))
+            preprocessed.append({'sentence_1' : sent1, 
+                                'sentence_2' : sent2, 
                                 'gold_label' : pair['gold_label']})
     end = time.time()
     print(f" It took {(end - start):.2f} seconds to tokenize {split} split")
@@ -86,3 +92,44 @@ def align_vocab_with_glove(data_vocab):
     return embeddings
 
 # print(align_vocab_with_glove(v))
+
+
+class TextpairDataset(Dataset):
+    def __init__(self, dataset, vocab, label_mapping):
+        self.dataset = dataset
+        self.vocab = vocab
+        self.label_mapping = label_mapping
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        sent1 = []
+        for token in self.dataset[idx]['sentence_1']:
+          sent1.append(self.vocab.mapping.get(token.text, 0))
+
+        sent2 = []
+        for token in self.dataset[idx]['sentence_2']:
+          sent2.append(self.vocab.mapping.get(token.text, 0))
+
+        label = self.label_mapping[self.dataset[idx]['gold_label']]
+        
+        return torch.LongTensor([sent1]), torch.LongTensor([sent2]), torch.LongTensor([label])
+    
+
+
+def custom_collate(batch):
+    """ map all sentences to the maximum length within a batch"""
+    # max_length across both sentences
+    max_length = max([max(len(sent1[0]), len(sent2[0])) for sent1, sent2, _ in batch])
+    sent1s = []
+    sent2s = []
+    labels = []
+    # ID = 1 for pad token in vocab
+    padding_ID = 1
+    for sent1, sent2, label in batch:
+      # fill difference between max length and sentence length with padding token
+      padded_sent1 = sent1.tolist()[0] + [padding_ID] * (max_length - len(sent1[0]))
+      padded_sent2 = sent2.tolist()[0] + [padding_ID] * (max_length - len(sent2[0]))
+      sent1s.append(padded_sent1), sent2s.append(padded_sent2), labels.append(label)
+    return torch.tensor(sent1s), torch.tensor(sent2s), torch.tensor(labels)
