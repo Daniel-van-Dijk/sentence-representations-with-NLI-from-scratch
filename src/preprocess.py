@@ -11,7 +11,7 @@ def read_json(split='dev'):
                 pair = json.loads(line)
                 # only keep label and sentence pair
                 data.append({key: pair[key] for key in ['gold_label', 'sentence1', 'sentence2']})
-    print('done reading json')
+    print(f'done reading {split} json')
     return data
 
 def preprocess(split='dev'):
@@ -22,9 +22,10 @@ def preprocess(split='dev'):
     data = read_json(split)
     preprocessed = []
 
-    # TODO: ask labels = ['neutral', 'entailment', 'contradiction', '-']
+    # TODO: ask "-"? labels = ['neutral', 'entailment', 'contradiction', '-']
     labels = ['neutral', 'entailment', 'contradiction']
     start = time.time()
+  
     for pair in data:
         if pair['gold_label'] in labels:
             preprocessed.append({'sentence_1' : list(tokenizer(pair['sentence1'].lower())), 
@@ -38,8 +39,8 @@ class Vocabulary:
   """
   Create vocabulary by:
   - generating a set of the words in corpus
-  - put in list with <unk> and <pad> and use index of this list as ID
   - sort vocab set such that ID's will be the same across runs.
+  - put in list with <unk> and <pad> as first tokens and use index of this list as ID
   """
   def __init__(self):
     self.vocab = set()
@@ -51,31 +52,37 @@ class Vocabulary:
   def create_mapping(self):
     # set <unk> and <pad> at position 0 and 1 and append sorted vocab set as list.
     vocab_list = ['<unk>', '<pad>'] + sorted(list(self.vocab))
-    # make mapping where key is word and value is index in index list
-    self.mapping = {index: word for word, index in enumerate(vocab_list)}
+    # make mapping where key is token and value is index in index list
+    self.mapping = {index: token for token, index in enumerate(vocab_list)}
 
 
 # v = Vocabulary()
+# preprocessed = preprocess()
 # for pair in preprocessed:
 #   for token in pair['sentence_1'] + pair['sentence_2']:
 #     v.add_token(token.text)
 # v.create_mapping()
 
 
-def get_glove():
-    with open("./SentEval/pretrained/glove.840B.300d.txt", 'r') as file:
-      glove = file.readlines()
-    v_glove = Vocabulary()
-    vectors = []
-    # <unk> and <pad> are zero-initialized
-    vectors.append([0]*300) # <unk>
-    vectors.append([0]*300) # <pad>
-    for line in glove[:10000]:
+def align_vocab_with_glove(data_vocab):
+    glove_dim = 300
+    # create zero's embedding matrix of size (vocab_size, glove_dim) 
+    # tokens from vocab which are not in glove will keep zero embeddings
+    embeddings = np.zeros((len(data_vocab.mapping), glove_dim))
+    start = time.time()
+    with open("./SentEval/pretrained/glove.840B.300d.txt", 'r') as glove:
+      for line in glove:
+        # token is first element of line
         token = line.split()[0]
-        v_glove.add_token(token)
-        embedding = line.split()[1:]
-        vectors.append(embedding)
-    v_glove.create_mapping()
-    print("Vocabulary size:", len(v_glove.mapping))
-    vectors = np.stack(vectors, axis=0).astype(float)
-    return v_glove, vectors
+        # rest of line is 300-dim embedding
+        glove_embedding = line.split()[1:]
+        # only store embedding when token in vocab and embedding is correct dim
+        if token in data_vocab.mapping and len(glove_embedding) == glove_dim:
+            token_ID = data_vocab.mapping[token]
+            # use token ID as row index in embedding matrix, convert string to float
+            embeddings[token_ID, :] = np.array(glove_embedding, dtype=np.float32)
+    end = time.time()
+    print(f" It took {(end - start):.2f} seconds to align vocab with glove")
+    return embeddings
+
+# print(align_vocab_with_glove(v))
