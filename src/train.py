@@ -61,10 +61,11 @@ def evaluate(model, dataloader, loss_module):
     return val_loss / len(dataloader), correct_preds / total_preds
     
 
-def train(train_loader, validation_loader, model, loss_module, num_epochs=1):
+def train(train_loader, validation_loader, model, loss_module, num_epochs=5):
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     # learning rate * 0.99 after every epoch
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.99)
+    last_validation_accuracy = 0
     for epoch in range(num_epochs):
         model.train()
         train_loss = 0
@@ -85,9 +86,14 @@ def train(train_loader, validation_loader, model, loss_module, num_epochs=1):
             output_loss.backward()
             optimizer.step()
         validation_loss, validation_accuracy = evaluate(model, validation_loader, loss_module)
-
+        
         print(f'avg training loss at epoch {epoch}: {validation_loss}')
-        print(f'Validation accuracy at epoch {epoch}: {validation_accuracy}')
-       
+        print(f'Validation accuracy at epoch {epoch}: {validation_accuracy }%')
+        if validation_accuracy < last_validation_accuracy:
+            print('accuracy decreased')
+            for group in optimizer.param_groups:
+                # decrease lr by 5 if validation accuracy decreases
+                group['lr'] /= 5
+        last_validation_accuracy = validation_accuracy
         scheduler.step()
 train(train_loader, validation_loader, bow, loss_module)
