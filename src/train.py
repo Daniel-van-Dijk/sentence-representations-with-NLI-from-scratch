@@ -96,4 +96,6 @@ def train(train_loader, validation_loader, model, loss_module, num_epochs=5):
                 group['lr'] /= 5
         last_validation_accuracy = validation_accuracy
         scheduler.step()
+        if scheduler.get_last_lr() < 0.00001:
+            break
 train(train_loader, validation_loader, bow, loss_module)
