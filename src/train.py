@@ -2,15 +2,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from preprocess import *
+#from preprocess import *
 from torch.nn.utils.rnn import pad_sequence
-import numpy as np
+#import numpy as np
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 seed = 42
 torch.manual_seed(seed)
 
 print(device)
+
+
 
 class BOW(nn.Module):
 
@@ -78,11 +80,13 @@ bow.to(device)
 loss_module = nn.CrossEntropyLoss()
 
 def train(train_loader, validation_loader, model, loss_module, num_epochs=5):
-    # TODO: add weight decay etc..
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    optimizer = optim.SGD(model.parameters(), lr=0.1)
+    # learning rate * 0.99 after every epoch
+    scheduler = optim.StepLR(optimizer, step_size=1, gamma=0.99)
     for epoch in range(num_epochs):
         model.train()
         train_loss = 0
+        print(f'starting epoch {epoch} with learning rate: {scheduler.get_last_lr()}')
         for sent1s, sent2s, labels in train_loader:
             sent1s = sent1s.to(device)
             sent2s = sent2s.to(device)
@@ -94,10 +98,22 @@ def train(train_loader, validation_loader, model, loss_module, num_epochs=5):
             # print('labels', labels)
             # print('labels shape', labels.shape)
             output_loss = loss_module(output, labels)
-            train_loss += output_loss
+            train_loss += output_loss.item()
             output_loss.backward()
             optimizer.step()
-        print(f'avg loss at epoch {epoch}: {train_loss / len(train_loader)}')
-            
 
+        print(f'avg training loss at epoch {epoch}: {train_loss / len(train_loader)}')
+        
+        model.eval()
+        val_loss = 0
+        for sent1s, sent2s, labels in validation_loader:
+            sent1s = sent1s.to(device)
+            sent2s = sent2s.to(device)
+            labels = labels.to(device)
+            optimizer.zero_grad()
+            output = bow(sent1s, sent2s)
+            output_val_loss = loss_module(output, labels)
+            val_loss += output_val_loss.item()
+        print(f'avg validation loss at epoch {epoch}: {train_loss / len(train_loader)}')
+        scheduler.step()
 train(train_loader, validation_loader, bow, loss_module)
