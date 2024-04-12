@@ -1,3 +1,8 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.nn.utils.rnn import pack_padded_sequence
+
 class LSTM(nn.Module):
 
     def __init__(self, embedding_dim, hidden_dim, vocab_size, num_labels):
@@ -9,12 +14,17 @@ class LSTM(nn.Module):
         self.linear2 = nn.Linear(hidden_dim, num_labels)
         self.relu = torch.nn.ReLU()
 
-    def forward(self, sentence1, sentence2):
+    def forward(self, sentence1, lengths1, sentence2, lengths2):
         # print(sentence1.shape)
         embeds1 = self.token_embeddings(sentence1)
         embeds2 = self.token_embeddings(sentence2)
-        output1, (hn1, cn1) = self.lstm(embeds1)
-        output2, (hn2, cn2) = self.lstm(embeds2)
+
+        # pack padded variable input
+        packed1 = pack_padded_sequence(embeds1, lengths1, batch_first=True, enforce_sorted=False)
+        packed2 = pack_padded_sequence(embeds2, lengths2, batch_first=True, enforce_sorted=False)
+
+        _, u, _ = self.lstm(packed1)
+        _, v, _ = self.lstm(packed2)
 
         diff = torch.abs(u - v)
         dotprod = u * v

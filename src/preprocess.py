@@ -133,14 +133,14 @@ def custom_collate(batch):
     """ map all sentences to the maximum length within a batch"""
     # max_length across both sentences
     max_length = max([max(len(sent1[0]), len(sent2[0])) for sent1, sent2, _ in batch])
-    sent1s = []
-    sent2s = []
-    labels = []
+    sent1s, lengths1, sent2s, lengths2, labels = [], [], [], [], []
     # ID = 1 for pad token in vocab
     padding_ID = 1
     for sent1, sent2, label in batch:
       # fill difference between max length (of batch) and sentence length with padding tokens
       padded_sent1 = sent1.tolist()[0] + [padding_ID] * (max_length - len(sent1[0]))
       padded_sent2 = sent2.tolist()[0] + [padding_ID] * (max_length - len(sent2[0]))
+      # store lengths of sentences for pack_padded_sequence
+      lengths1.append(len(sent1[0])), lengths2.append(len(sent2[0]))
       sent1s.append(padded_sent1), sent2s.append(padded_sent2), labels.append(label)
-    return torch.tensor(sent1s), torch.tensor(sent2s), torch.tensor(labels)
+    return torch.tensor(sent1s), torch.tensor(sent2s), torch.tensor(labels), lengths1, lengths2

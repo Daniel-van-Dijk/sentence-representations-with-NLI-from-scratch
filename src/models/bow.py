@@ -1,3 +1,6 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 class BOW(nn.Module):
 
     def __init__(self, embedding_dim, hidden_dim, vocab_size, num_labels):
