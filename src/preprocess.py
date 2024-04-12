@@ -59,10 +59,18 @@ class Vocabulary:
     # set <unk> and <pad> at position 0 and 1 and append sorted vocab set as list.
     vocab_list = ['<unk>', '<pad>'] + sorted(list(self.vocab))
     # make mapping where key is token and value is index in index list
-    self.mapping = {index: token for token, index in enumerate(vocab_list)}
+    self.mapping = {token: index for index, token in enumerate(vocab_list)}
+
+def create_vocab(dataset):
+  v = Vocabulary()
+  for pair in dataset:
+    for token in pair['sentence_1'] + pair['sentence_2']:
+      v.add_token(token.text)
+  v.create_mapping()
+  return v
 
 
-# v = Vocabulary()
+v = Vocabulary()
 # preprocessed = preprocess()
 # for pair in preprocessed:
 #   for token in pair['sentence_1'] + pair['sentence_2']:
@@ -73,7 +81,7 @@ class Vocabulary:
 def align_vocab_with_glove(data_vocab):
     glove_dim = 300
     # create zero's embedding matrix of size (vocab_size, glove_dim) 
-    # tokens from vocab which are not in glove will keep zero embeddings
+    # vocab tokens not in glove will keep zero embeddings
     embeddings = np.zeros((len(data_vocab.mapping), glove_dim))
     start = time.time()
     with open("./SentEval/pretrained/glove.840B.300d.txt", 'r') as glove:
@@ -106,12 +114,15 @@ class TextpairDataset(Dataset):
     def __getitem__(self, idx):
         sent1 = []
         for token in self.dataset[idx]['sentence_1']:
+          # token.text since token is still object from spacy
+          # convert tokens to their id's and use 0 (<unk> index) if token not in vocab
           sent1.append(self.vocab.mapping.get(token.text, 0))
 
         sent2 = []
         for token in self.dataset[idx]['sentence_2']:
           sent2.append(self.vocab.mapping.get(token.text, 0))
 
+        # map label to numeric
         label = self.label_mapping[self.dataset[idx]['gold_label']]
         
         return torch.LongTensor([sent1]), torch.LongTensor([sent2]), torch.LongTensor([label])
@@ -128,7 +139,7 @@ def custom_collate(batch):
     # ID = 1 for pad token in vocab
     padding_ID = 1
     for sent1, sent2, label in batch:
-      # fill difference between max length and sentence length with padding token
+      # fill difference between max length (of batch) and sentence length with padding tokens
       padded_sent1 = sent1.tolist()[0] + [padding_ID] * (max_length - len(sent1[0]))
       padded_sent2 = sent2.tolist()[0] + [padding_ID] * (max_length - len(sent2[0]))
       sent1s.append(padded_sent1), sent2s.append(padded_sent2), labels.append(label)

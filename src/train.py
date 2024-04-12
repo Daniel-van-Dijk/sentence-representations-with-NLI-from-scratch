@@ -12,26 +12,6 @@ torch.manual_seed(seed)
 
 print(device)
 
-
-labels = ['neutral', 'entailment', 'contradiction']
-label_mapping = {index: label for label, index in enumerate(labels)}
-
-
-dev_split = preprocess(split='dev')
-
-v = Vocabulary()
-for pair in dev_split:
-  for token in pair['sentence_1'] + pair['sentence_2']:
-    v.add_token(token.text)
-v.create_mapping()
-
-embeddings = align_vocab_with_glove(v)
-
-# TextpairDataset and custom_collate function in preprocess.py
-Textpair_data = TextpairDataset(dev_split, v, label_mapping)
-
-validation_loader = torch.utils.data.DataLoader(Textpair_data, batch_size=2, shuffle=False, collate_fn = custom_collate)
-
 class BOW(nn.Module):
 
     def __init__(self, embedding_dim, hidden_dim, vocab_size, num_labels):
@@ -65,32 +45,59 @@ class BOW(nn.Module):
         return output
         
 
+labels = ['neutral', 'entailment', 'contradiction']
+# map label to numeric
+label_mapping = {label: index for index, label in enumerate(labels)}
+
+
+# For testing purposes, use dev split as training set:
+# TODO: change dev to train
+
+train_split = preprocess(split='dev')
+vocab = create_vocab(train_split)
+embeddings = align_vocab_with_glove(vocab)
+
+# TextpairDataset and custom_collate function in preprocess.py
+train_data = TextpairDataset(train_split, vocab, label_mapping)
+train_loader = torch.utils.data.DataLoader(train_data, batch_size=64, shuffle=True, collate_fn=custom_collate)
+
+validation_split = preprocess(split='test')
+validation_data = TextpairDataset(validation_split, vocab, label_mapping)
+validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=64, shuffle=False, collate_fn=custom_collate)
+
 
 embedding_dim = 300
-vocab_size = len(v.mapping)
+vocab_size = len(vocab.mapping)
 print(vocab_size)
 hidden_dim = 512
 bow = BOW(embedding_dim, hidden_dim, vocab_size, len(labels) )
-#embeddings = np.random.rand(vocab_size, embedding_dim)
 bow.token_embeddings.weight.data.copy_(torch.from_numpy(embeddings))
 bow.token_embeddings.weight.requires_grad = False
+bow.to(device)
 
-loss = nn.CrossEntropyLoss()
+loss_module = nn.CrossEntropyLoss()
 
-def train(train_loader, model):
+def train(train_loader, validation_loader, model, loss_module, num_epochs=5):
     # TODO: add weight decay etc..
     optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    for epoch in range(num_epochs):
+        model.train()
+        train_loss = 0
+        for sent1s, sent2s, labels in train_loader:
+            sent1s = sent1s.to(device)
+            sent2s = sent2s.to(device)
+            labels = labels.to(device)
+            optimizer.zero_grad()
+            output = bow(sent1s, sent2s)
+            # print('softmax output', output)
+            # print('softmax output shape', output.shape)
+            # print('labels', labels)
+            # print('labels shape', labels.shape)
+            output_loss = loss_module(output, labels)
+            train_loss += output_loss
+            output_loss.backward()
+            optimizer.step()
+        print(f'avg loss at epoch {epoch}: {train_loss / len(train_loader)}')
+            
 
-    for sent1s, sent2s, labels in train_loader:
-        optimizer.zero_grad()
-        output = bow(sent1s, sent2s)
-        # print('softmax output', output)
-        # print('softmax output shape', output.shape)
-        # print('labels', labels)
-        # print('labels shape', labels.shape)
-        output_loss = loss(output, labels)
-        output_loss.backward()
-        optimizer.step()
-        print(output_loss)
-
-train(validation_loader, bow)
+train(train_loader, validation_loader, bow, loss_module)
