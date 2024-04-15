@@ -3,12 +3,11 @@ import spacy
 import time
 from spacy.lang.en import English
 import numpy as np
-
 import torch
 from torch.utils.data import Dataset
 import torch.nn as nn
 
-def read_json(split='dev'):
+def read_json(split='train'):
     data = []
     with open(f"../data/snli_1.0/snli_1.0_{split}.jsonl", 'r') as json_file:
         for line in json_file:
@@ -18,7 +17,7 @@ def read_json(split='dev'):
     print(f'done reading {split} json')
     return data
 
-def preprocess(split='dev'):
+def preprocess(split='train'):
     """lowering and tokenization of sentences"""
 
     nlp = English()
@@ -68,14 +67,6 @@ def create_vocab(dataset):
       v.add_token(token.text)
   v.create_mapping()
   return v
-
-
-v = Vocabulary()
-# preprocessed = preprocess()
-# for pair in preprocessed:
-#   for token in pair['sentence_1'] + pair['sentence_2']:
-#     v.add_token(token.text)
-# v.create_mapping()
 
 
 def align_vocab_with_glove(data_vocab):
