@@ -9,6 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 from models.bow import BOW
 from models.lstm import LSTM_NLI
+from models.bilstm import BiLSTM_NLI
 import datetime
 import argparse
 # for logging
@@ -31,18 +32,23 @@ def get_args_parser():
 def load_model(embeddings, labels, vocab_size, device, model_flag='lstm', state_file_path = None):
     embedding_dim = 300
     hidden_dim = 512
+    print(f'loading {model_flag}')
     if model_flag == 'lstm':
         # TODO: lstm_dim concatenation or not? 
         lstm_dim = 2048
         model = LSTM_NLI(embedding_dim, lstm_dim, hidden_dim, vocab_size, len(labels))
-        model.token_embeddings.weight.data.copy_(torch.from_numpy(embeddings))
-        model.token_embeddings.weight.requires_grad = False
+        
+    
+    elif model_flag == 'bilstm':
+        lstm_dim = 4096
+        model = BiLSTM_NLI(embedding_dim, lstm_dim, hidden_dim, vocab_size, len(labels))
         
     elif model_flag == 'bow':
         model = BOW(embedding_dim, hidden_dim, vocab_size, len(labels) )
-        model.token_embeddings.weight.data.copy_(torch.from_numpy(embeddings))
-        model.token_embeddings.weight.requires_grad = False
+       
 
+    model.token_embeddings.weight.data.copy_(torch.from_numpy(embeddings))
+    model.token_embeddings.weight.requires_grad = False
     if state_file_path:
         state_dict = torch.load(state_file_path)
         model.load_state_dict(state_dict, strict=False)
@@ -62,7 +68,7 @@ def evaluate(model, dataloader, loss_module, device, model_flag):
             if model_flag == 'bow':
                 output = model(sent1s,sent2s)
 
-            elif model_flag == 'lstm':
+            elif model_flag == 'lstm' or model_flag == 'bilstm':
                 output = model(sent1s,lengths1, sent2s, lengths2)
             predicted_labels = torch.argmax(output, dim=1)
             correct_preds += (predicted_labels == labels).sum() 
@@ -74,7 +80,9 @@ def evaluate(model, dataloader, loss_module, device, model_flag):
 
 def train(train_loader, validation_loader, model, loss_module, device, num_epochs=50, model_flag='bow'):
     writer = SummaryWriter(f'runs/{model_flag}/{TIME}')
-
+    weights_folder = f'weights/{model_flag}'
+    if not os.path.exists(weights_folder):
+         os.makedirs(weights_folder)
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     # learning rate * 0.99 after every epoch
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.99)
@@ -92,7 +100,7 @@ def train(train_loader, validation_loader, model, loss_module, device, num_epoch
             if model_flag == 'bow':
                 output = model(sent1s,sent2s)
 
-            elif model_flag == 'lstm':
+            elif model_flag == 'lstm' or model_flag == 'bilstm':
                 output = model(sent1s,lengths1, sent2s, lengths2)
             output_loss = loss_module(output, labels)
             train_loss += output_loss.item()
@@ -124,11 +132,13 @@ def train(train_loader, validation_loader, model, loss_module, device, num_epoch
             writer.close()
             sd = model.state_dict()
             del sd['token_embeddings.weight']
-            weights_folder = f'weights/{model_flag}'
-            if not os.path.exists(weights_folder):
-                os.makedirs(weights_folder)
             torch.save(sd, f'{weights_folder}/{model_flag}_{TIME}.pth')
             break
+    # also save if max epochs reached instead of lr below treshold
+    sd = model.state_dict()
+    # do not save embeddings
+    del sd['token_embeddings.weight']
+    torch.save(sd, f'{weights_folder}/{model_flag}_{TIME}.pth')
 
 def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -156,7 +166,7 @@ def main(args):
     validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=args.batch_size, shuffle=False, collate_fn=custom_collate)
     vocab_size = len(vocab.mapping)
     print(f'size of vocab: {vocab_size}')
-
+    #vocab_size = 33623
     loss_module = nn.CrossEntropyLoss()
     model = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
     train(train_loader, validation_loader, model, loss_module, device, model_flag=args.model)
