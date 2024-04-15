@@ -24,9 +24,12 @@ class BiLSTM_NLI(nn.Module):
 
         _, (u, _) = self.bilstm(packed1)
         _, (v, _) = self.bilstm(packed2)
-        # [2, 64, 2048] -> [64, 4096]
-        u = u.view(u.shape[1], -1)
-        v = v.view(v.shape[1], -1)
+        # [2, 64, 2048] -> [64, 2, 2048]
+        u = u.transpose(0, 1)
+        v = v.transpose(0, 1)
+        # [64, 2, 2048] -> [64, 4096]
+        u = u.reshape(u.shape[0], -1)
+        v = v.reshape(v.shape[0], -1)
         # print('after')
         # print(u.shape)
         # print(v.shape)

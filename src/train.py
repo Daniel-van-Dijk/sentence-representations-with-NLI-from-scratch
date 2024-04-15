@@ -40,7 +40,7 @@ def load_model(embeddings, labels, vocab_size, device, model_flag='lstm', state_
         
     
     elif model_flag == 'bilstm':
-        bilstm_dim = 4096
+        bilstm_dim = 2048
         model = BiLSTM_NLI(embedding_dim, bilstm_dim, hidden_dim, vocab_size, len(labels))
         
     elif model_flag == 'bow':
