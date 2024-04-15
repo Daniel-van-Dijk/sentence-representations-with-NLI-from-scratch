@@ -23,7 +23,7 @@ class BiLSTM_NLI(nn.Module):
         packed2 = pack_padded_sequence(embeds2, lengths2, batch_first=True, enforce_sorted=False)
 
         _, (u, _) = self.bilstm(packed1)
-        _, (v, _) = self.bilstm(packed2)ß
+        _, (v, _) = self.bilstm(packed2)
         # [2, 64, 2048] -> [64, 4096]
         u = u.view(u.shape[1], -1)
         v = v.view(v.shape[1], -1)
