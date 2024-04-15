@@ -22,7 +22,7 @@ def get_args_parser():
     parser.add_argument('--model', default='bow', type=str, metavar='MODEL',
                         help='model to train')
     parser.add_argument('--checkpoint_path', type=str,
-                        help='dataset path')
+                        help='checkpoint path')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate')
     parser.add_argument('--seed', default=42, type=int)
