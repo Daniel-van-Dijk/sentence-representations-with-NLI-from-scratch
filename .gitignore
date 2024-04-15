@@ -166,3 +166,5 @@ cython_debug/
 #.idea/
 
 data/
+src/runs/
+src/weights/
