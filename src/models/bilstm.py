@@ -9,8 +9,8 @@ class BiLSTM_NLI(nn.Module):
         super(BiLSTM_NLI, self).__init__()
         self.token_embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.bilstm = nn.LSTM(input_size=embedding_dim, hidden_size=bilstm_dim, batch_first=True, bidirectional=True)
-        # dim * 4 as we concatenate 4 vectors: u, v, |u - v|, u*v
-        self.linear1 = nn.Linear(bilstm_dim*4, hidden_dim)
+        # dim * 8 as we concatenate 4 concatenated 4096-dim (from 2 directions) vectors : u, v, |u - v|, u*v
+        self.linear1 = nn.Linear(bilstm_dim*8, hidden_dim)
         self.linear2 = nn.Linear(hidden_dim, num_labels)
         self.relu = torch.nn.ReLU()
 
@@ -30,16 +30,16 @@ class BiLSTM_NLI(nn.Module):
         # print('after')
         # print(u.shape)
         # print(v.shape)
-        # exit()
 
         diff = torch.abs(u - v)
         dotprod = u * v
         # print(diff.shape)
         # print(dotprod.shape)
         combined = torch.hstack([u, v, diff, dotprod])
+        # print(combined.shape)
+
         intermediate = self.relu(self.linear1(combined))
         output = F.softmax(self.linear2(intermediate), dim=1)
-        # print(combined.shape)
         # print(output)
         # print(output.shape)
         # print(combined.shape)
