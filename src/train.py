@@ -3,58 +3,32 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from preprocess import *
+import os
 from torch.utils.tensorboard import SummaryWriter
 
 import numpy as np
 from models.bow import BOW
 from models.lstm import LSTM_NLI
 import datetime
+import argparse
 # for logging
 TIME = datetime.datetime.now()
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-seed = 42
-torch.manual_seed(seed)
 
-print(device)
+def get_args_parser():
+    parser = argparse.ArgumentParser('Learning sentence representations via NLI', add_help=False)
+    parser.add_argument('--batch_size', default=64, type=int,
+                        help='Batch size for training and evaluation')
+    parser.add_argument('--model', default='bow', type=str, metavar='MODEL',
+                        help='model to train')
+    parser.add_argument('--checkpoint_path', type=str,
+                        help='dataset path')
+    parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
+                        help='learning rate')
+    parser.add_argument('--seed', default=42, type=int)
+    return parser
 
-
-        
-
-labels = ['neutral', 'entailment', 'contradiction']
-# map label to numeric
-label_mapping = {label: index for index, label in enumerate(labels)}
-
-train_split = preprocess(split='train')
-vocab = create_vocab(train_split)
-embeddings = align_vocab_with_glove(vocab)
-#embeddings = np.random.rand(33623, 300)
-#print(embeddings.shape)
-
-# TextpairDataset and custom_collate function in preprocess.py
-train_data = TextpairDataset(train_split, vocab, label_mapping)
-print(f'Train set size: {len(train_data)}')
-train_loader = torch.utils.data.DataLoader(train_data, batch_size=64, shuffle=True, collate_fn=custom_collate)
-print(f'Number of train batches: {len(train_loader)}')
-
-validation_split = preprocess(split='dev')
-validation_data = TextpairDataset(validation_split, vocab, label_mapping)
-print(f'Validation set size: {len(validation_data)}')
-
-validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=64, shuffle=False, collate_fn=custom_collate)
-
-embedding_dim = 300
-vocab_size = len(vocab.mapping)
-#vocab_size = 33623
-print(f'size of vocab: {vocab_size}')
-#hidden_dim = 512
-# bow = BOW(embedding_dim, hidden_dim, vocab_size, len(labels) )
-# bow.token_embeddings.weight.data.copy_(torch.from_numpy(embeddings))
-# bow.token_embeddings.weight.requires_grad = False
-# bow.to(device)
-
-
-def load_model(embeddings, labels, vocab_size, model_flag='lstm', state_file_path = None):
+def load_model(embeddings, labels, vocab_size, device, model_flag='lstm', state_file_path = None):
     embedding_dim = 300
     hidden_dim = 512
     if model_flag == 'lstm':
@@ -76,23 +50,7 @@ def load_model(embeddings, labels, vocab_size, model_flag='lstm', state_file_pat
     model = model.to(device)
     return model
 
-
-# print("Model's state_dict:")
-# sd = lstm.state_dict()
-# for param_tensor in sd:
-#     print(param_tensor, "\t", sd[param_tensor].size())
-
-# del sd['token_embeddings.weight']
-# print('deleted')
-# print("Model's state_dict:")
-# for param_tensor in sd:
-#     print(param_tensor, "\t", sd[param_tensor].size())
-
-# torch.save(sd, 'lstm_wo_embeddings.pth')
-
-loss_module = nn.CrossEntropyLoss()
-
-def evaluate(model, dataloader, loss_module, model_flag):
+def evaluate(model, dataloader, loss_module, device, model_flag):
     model.eval()
     val_loss = 0
     total_preds, correct_preds = 0, 0
@@ -114,7 +72,7 @@ def evaluate(model, dataloader, loss_module, model_flag):
     return val_loss / len(dataloader), correct_preds / total_preds
     
 
-def train(train_loader, validation_loader, model, loss_module, num_epochs=50, model_flag='bow'):
+def train(train_loader, validation_loader, model, loss_module, device, num_epochs=50, model_flag='bow'):
     writer = SummaryWriter(f'runs/{model_flag}/{TIME}')
 
     optimizer = optim.SGD(model.parameters(), lr=0.1)
@@ -136,10 +94,6 @@ def train(train_loader, validation_loader, model, loss_module, num_epochs=50, mo
 
             elif model_flag == 'lstm':
                 output = model(sent1s,lengths1, sent2s, lengths2)
-            # print('softmax output', output)
-            # print('softmax output shape', output.shape)
-            # print('labels', labels)
-            # print('labels shape', labels.shape)
             output_loss = loss_module(output, labels)
             train_loss += output_loss.item()
             output_loss.backward()
@@ -150,7 +104,7 @@ def train(train_loader, validation_loader, model, loss_module, num_epochs=50, mo
                 writer.add_scalar('training loss',
                                 train_loss / 250,
                                 epoch * len(train_loader) + i)
-        validation_loss, validation_accuracy = evaluate(model, validation_loader, loss_module, model_flag)
+        validation_loss, validation_accuracy = evaluate(model, validation_loader, loss_module, device, model_flag)
         
         print(f'avg training loss at epoch {epoch}: {validation_loss}')
         print(f'Validation accuracy at epoch {epoch}: {validation_accuracy }%')
@@ -162,20 +116,60 @@ def train(train_loader, validation_loader, model, loss_module, num_epochs=50, mo
                 # decrease lr by 5 if validation accuracy decreases
                 group['lr'] /= 5
         last_validation_accuracy = validation_accuracy
+        # update LR
         scheduler.step()
         if scheduler.get_last_lr()[0] < 0.00001:
             print('reached treshold, stopping training')
             writer.flush()
             writer.close()
             sd = model.state_dict()
-            # for param_tensor in sd:
-            #     print(param_tensor, "\t", sd[param_tensor].size())
-
             del sd['token_embeddings.weight']
-            torch.save(sd, f'{model_flag}_wo_embeddings.pth')
-
+            weights_folder = f'weights/{model_flag}'
+            if not os.path.exists(weights_folder):
+                os.makedirs(weights_folder)
+            torch.save(sd, f'{weights_folder}/{model_flag}_{TIME}.pth')
             break
 
+def main(args):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    torch.manual_seed(args.seed)
+    print(device)
+    labels = ['neutral', 'entailment', 'contradiction']
+    # map label to numeric
+    label_mapping = {label: index for index, label in enumerate(labels)}
 
-model = load_model(embeddings, labels, vocab_size, 'lstm', 'lstm_wo_embeddings.pth')
-#train(train_loader, validation_loader, lstm, loss_module, model_flag='lstm')
+    train_split = preprocess(split='train')
+    vocab = create_vocab(train_split)
+    embeddings = align_vocab_with_glove(vocab)
+    #embeddings = np.random.rand(33623, 300)
+
+    # TextpairDataset and custom_collate function in preprocess.py
+    train_data = TextpairDataset(train_split, vocab, label_mapping)
+    print(f'Train set size: {len(train_data)}')
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, collate_fn=custom_collate)
+    print(f'Number of train batches: {len(train_loader)}')
+
+    validation_split = preprocess(split='dev')
+    validation_data = TextpairDataset(validation_split, vocab, label_mapping)
+    print(f'Validation set size: {len(validation_data)}')
+
+    validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=args.batch_size, shuffle=False, collate_fn=custom_collate)
+    vocab_size = len(vocab.mapping)
+    print(f'size of vocab: {vocab_size}')
+
+    loss_module = nn.CrossEntropyLoss()
+    model = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
+    train(train_loader, validation_loader, model, loss_module, device, model_flag=args.model)
+
+if __name__ == '__main__':
+    args = get_args_parser()
+    args = args.parse_args()
+    print(f'seed: {args.seed}')
+    print(f'learning rate:  {args.lr}')
+    print(f'model: {args.model}')
+    if args.checkpoint_path:
+        print(f'loading checkpoint from {args.checkpoint_path}')
+    else:
+        print('no checkpoint path provided')
+        print(args.checkpoint_path)
+    main(args)
