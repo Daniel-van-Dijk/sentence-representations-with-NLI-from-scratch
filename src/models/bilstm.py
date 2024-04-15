@@ -5,12 +5,12 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 class BiLSTM_NLI(nn.Module):
 
-    def __init__(self, embedding_dim, lstm_dim, hidden_dim, vocab_size, num_labels):
+    def __init__(self, embedding_dim, bilstm_dim, hidden_dim, vocab_size, num_labels):
         super(BiLSTM_NLI, self).__init__()
         self.token_embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.bilstm = nn.LSTM(input_size=embedding_dim, hidden_size=lstm_dim, batch_first=True, bidirectional=True)
+        self.bilstm = nn.LSTM(input_size=embedding_dim, hidden_size=bilstm_dim, batch_first=True, bidirectional=True)
         # dim * 4 as we concatenate 4 vectors: u, v, |u - v|, u*v
-        self.linear1 = nn.Linear(lstm_dim*4, hidden_dim)
+        self.linear1 = nn.Linear(bilstm_dim*4, hidden_dim)
         self.linear2 = nn.Linear(hidden_dim, num_labels)
         self.relu = torch.nn.ReLU()
 
@@ -23,7 +23,7 @@ class BiLSTM_NLI(nn.Module):
         packed2 = pack_padded_sequence(embeds2, lengths2, batch_first=True, enforce_sorted=False)
 
         _, (u, _) = self.bilstm(packed1)
-        _, (v, _) = self.bilstm(packed2)
+        _, (v, _) = self.bilstm(packed2)ß
         # [2, 64, 2048] -> [64, 4096]
         u = u.view(u.shape[1], -1)
         v = v.view(v.shape[1], -1)
