@@ -17,7 +17,6 @@ class BiLSTM_MaxPool_NLI(nn.Module):
             )
 
     def forward(self, sentence1, lengths1, sentence2, lengths2):
-        print
         embeds1 = self.token_embeddings(sentence1)
         embeds2 = self.token_embeddings(sentence2)
         # pack padded variable length input
