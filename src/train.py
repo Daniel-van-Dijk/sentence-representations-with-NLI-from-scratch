@@ -10,6 +10,7 @@ import numpy as np
 from models.bow import BOW
 from models.lstm import LSTM_NLI
 from models.bilstm import BiLSTM_NLI
+from models.bilstm_maxpool import BiLSTM_MaxPool_NLI
 import datetime
 import argparse
 # for logging
@@ -34,7 +35,6 @@ def load_model(embeddings, labels, vocab_size, device, model_flag='lstm', state_
     hidden_dim = 512
     print(f'loading {model_flag}')
     if model_flag == 'lstm':
-        # TODO: lstm_dim concatenation or not? 
         lstm_dim = 2048
         model = LSTM_NLI(embedding_dim, lstm_dim, hidden_dim, vocab_size, len(labels))
         
@@ -42,12 +42,18 @@ def load_model(embeddings, labels, vocab_size, device, model_flag='lstm', state_
     elif model_flag == 'bilstm':
         bilstm_dim = 2048
         model = BiLSTM_NLI(embedding_dim, bilstm_dim, hidden_dim, vocab_size, len(labels))
+    
+    elif model_flag == 'bilstm_max':
+        bilstm_dim = 2048
+        model = BiLSTM_MaxPool_NLI(embedding_dim, bilstm_dim, hidden_dim, vocab_size, len(labels))
+
         
     elif model_flag == 'bow':
         model = BOW(embedding_dim, hidden_dim, vocab_size, len(labels) )
        
 
     model.token_embeddings.weight.data.copy_(torch.from_numpy(embeddings))
+    # keep embeddings fixed during training
     model.token_embeddings.weight.requires_grad = False
     if state_file_path:
         state_dict = torch.load(state_file_path)
@@ -68,7 +74,7 @@ def evaluate(model, dataloader, loss_module, device, model_flag):
             if model_flag == 'bow':
                 output = model(sent1s,sent2s)
 
-            elif model_flag == 'lstm' or model_flag == 'bilstm':
+            elif model_flag == 'lstm' or model_flag == 'bilstm' or model_flag == 'bilstm_max':
                 output = model(sent1s,lengths1, sent2s, lengths2)
             predicted_labels = torch.argmax(output, dim=1)
             correct_preds += (predicted_labels == labels).sum() 
@@ -100,7 +106,7 @@ def train(train_loader, validation_loader, model, loss_module, device, num_epoch
             if model_flag == 'bow':
                 output = model(sent1s,sent2s)
 
-            elif model_flag == 'lstm' or model_flag == 'bilstm':
+            elif model_flag == 'lstm' or model_flag == 'bilstm' or model_flag == 'bilstm_max':
                 output = model(sent1s,lengths1, sent2s, lengths2)
             output_loss = loss_module(output, labels)
             train_loss += output_loss.item()
