@@ -199,18 +199,7 @@ if __name__ == "__main__":
     print(f"Calculating micro and macro average for {args.model}")
     print("\n")
 
-    micro, macro, num_tasks, num_samples = 0, 0, 0, 0
-    for task in results:
-        # only tasks that have accuracy as metric
-        if 'devacc' in results[task]:
-            macro += results[task]['devacc']
-            # weight by number of samples
-            micro += (results[task]['devacc'] * results[task]['ndev'])
-            num_tasks += 1
-            num_samples += results[task]['ndev']
-    macro /= num_tasks
-    micro /= num_samples
-
+    micro, macro = get_metrics(results)
     
     print('macro accuracy', macro)
     print('micro accuracy', micro)
