@@ -35,24 +35,48 @@ Perform the following steps to obtain the glove embeddings.
 2. unzip src/SentEval/pretrainedglove.840B.300d.zip -d ./src/SentEval/pretrained
 3. All files import glove from pretrained folder in SentEval
 
+
+### Pre-trained models
+
+Download weights folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
+Move weights folder in src/
+
 ## code structure
+
+Src/ contains four import files for training and evaluating the models: 
+1. preprocess.py: contains all code for preprocessing and creating the datasets. Train.py and eval.py import functions from here
+2. train.py: for training the models with NLI
+3. eval.py: for evaluating the models
+4. utils.py: extra functionalities such as code for loading the models. 
 
 ## train.py 
 
-The training is done with train.py
 
-python -u train.py --model bilstm_max
---model specifies which model to evaluate: 
+The training of a model can be initialized with: 
+
+python -u train.py --model <model> --checkpoint_path <chekpoint_path> 
+Example: python -u train.py --model bilstm_max --checkpoint_path weights/bilstm/bilstm_max_best.pth
+
+--model specifies which model to train: 
 Options: bow, lstm, bilstm, bilstm_max
+
+optional: 
+--checkpoint_path: initializes model from given checkpoint
+--batch_size: batch_size for training and evaluation, default: 64
+--lr: starting learning rate, default: 0.1
+--seed: default: 42
 
 ### Eval.py
-The evaluation is done with eval.py, 
+The evaluation of a model can be initialized with: 
 
-python -u eval.py --model bilstm --checkpoint_path weights/bilstm/bilstm_max_best.pth --device cpu
+python -u eval.py --model <model> --checkpoint_path <chekpoint_path> 
+Example: python -u eval.py --model bilstm_max --checkpoint_path weights/bilstm/bilstm_max_best.pth
 
 --model specifies which model to evaluate: 
 Options: bow, lstm, bilstm, bilstm_max
 
+optional: 
+--checkpoint_path: initializes model from given checkpoint
 
 
 
