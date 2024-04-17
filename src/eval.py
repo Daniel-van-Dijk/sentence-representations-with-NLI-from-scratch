@@ -63,6 +63,8 @@ def prepare(params, samples):
 def batcher(params, batch):
     batch = [sent if sent != [] else ['.'] for sent in batch]
     #print('batch size', len(batch))
+    if len(batch) != 128:
+        print('ALERT')
     embeddings_list = []
     for sent in batch:
         sent_vec = []
@@ -75,7 +77,14 @@ def batcher(params, batch):
         embeddings_list.append(embeddings.mean(1))
     # stack sentence representations of batch -> batch size x dim
     embeddings_list = torch.vstack(embeddings_list)
-    return embeddings
+    #print(embeddings_list.shape)
+    if embeddings_list.shape[0] != 128:
+        print('error in batch dim')
+        print(embeddings_list.shape)
+    if embeddings_list.shape[1] != 300:
+        print('error in hidden dim')
+        print(embeddings_list.shape)
+    return embeddings_list
 
 # Set params for SentEval
 params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 2}
@@ -99,7 +108,7 @@ if __name__ == "__main__":
         print('no checkpoint path provided')
         print(args.checkpoint_path)
 
-    train_split = preprocess(split='dev')
+    train_split = preprocess(split='train')
     vocab = create_vocab(train_split)
     embeddings = align_vocab_with_glove(vocab)
     labels = ['neutral', 'entailment', 'contradiction']
@@ -109,7 +118,7 @@ if __name__ == "__main__":
 
     model = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
 
-    params_senteval['bow'] = model.to(device)
+    params_senteval['bow'] = model
     se = senteval.engine.SE(params_senteval, batcher, prepare)
     # transfer_tasks = ['STS12', 'STS13', 'STS14', 'STS15', 'STS16',
     #                   'MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC',
