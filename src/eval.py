@@ -18,7 +18,7 @@ from models.bow import BOW
 from models.lstm import LSTM_NLI
 from models.bilstm import BiLSTM_NLI
 from models.bilstm_maxpool import BiLSTM_MaxPool_NLI
-
+from utils import *
 
 # Set PATHs
 PATH_TO_SENTEVAL = './SentEval/'
@@ -44,80 +44,38 @@ def get_args_parser():
     parser.add_argument('--seed', default=42, type=int)
     return parser
 
-def create_vocab(dataset):
-  v = Vocabulary()
-  for sent in dataset:
-    for token in sent:
-      v.add_token(token)
-  v.create_mapping()
-  return v
 
-# Get word vectors from vocabulary (glove, word2vec, fasttext ..)
-def get_wordvec(path_to_vec, word2id):
-    word_vec = {}
-
-    with io.open(path_to_vec, 'r', encoding='utf-8') as f:
-        # if word2vec or fasttext file : skip first line "next(f)"
-        for line in f:
-            word, vec = line.split(' ', 1)
-            if word in word2id:
-                word_vec[word] = np.fromstring(vec, sep=' ')
-
-    logging.info('Found {0} words with word vectors, out of \
-        {1} words'.format(len(word_vec), len(word2id)))
-    return word_vec
-
-
-# SentEval prepare and batcher
 def prepare(params, samples):
-    train_split = preprocess(split='train')
-    vocab = create_vocab(train_split)
-    embeddings = align_vocab_with_glove(vocab)
-    params.vocab = create_vocab(samples)
-    params.embeddings = align_vocab_with_glove(params.vocab)
-    #_, params.word2id = create_dictionary(samples)
-    #params.word_vec = get_wordvec(PATH_TO_VEC, params.word2id)
-    params.wvec_dim = 300
     return
 
+# # SentEval prepare and batcher
+# def prepare(params, samples):
+#     train_split = preprocess(split='train')
+#     #vocab = create_vocab(train_split)
+#     #embeddings = align_vocab_with_glove(vocab)
+#     params.vocab = create_vocab(train_split)
+#     params.embeddings = align_vocab_with_glove(params.vocab)
+#     #_, params.word2id = create_dictionary(samples)
+#     #params.word_vec = get_wordvec(PATH_TO_VEC, params.word2id)
+#     params.wvec_dim = 300
+#     return
+
 def batcher(params, batch):
+    batch = [sent if sent != [] else ['.'] for sent in batch]
+    #print('batch size', len(batch))
     embeddings_list = []
     for sent in batch:
         sent_vec = []
         for token in sent:
+            # get token ID's based on NLI vocab, unknown to 0 (<unk>)
             sent_vec.append(params.vocab.mapping.get(token, 0))
-        embeddings = params.bow.token_embeddings(sent_vec)
-        embeddings_list.append(np.mean(embeddings))
-
-    embeddings_list = np.vstack(embeddings_list)
-    print(embeddings.shape)
-    x = x - 3
+        # get glove embeddings of sentence based on token ID's
+        embeddings = params.bow.token_embeddings(torch.LongTensor([sent_vec]))
+        # !! only for bow
+        embeddings_list.append(embeddings.mean(1))
+    # stack sentence representations of batch -> batch size x dim
+    embeddings_list = torch.vstack(embeddings_list)
     return embeddings
-
-def batcher2(params, batch):
-    batch = [sent if sent != [] else ['.'] for sent in batch]
-    print('length of batch', len(batch))
-    print(batch)
-
-    embeddings = []
-
-    for sent in batch:
-        sentvec = []
-        for word in sent:
-            if word in params.vocab:
-                id = params.vocab.mapping.get(word, 0)
-                sentvec.append(params.word_vec[word])
-        if not sentvec:
-            vec = np.zeros(params.wvec_dim)
-            sentvec.append(vec)
-        sentvec = np.mean(sentvec, 0)
-        embeddings.append(sentvec)
-
-    embeddings = np.vstack(embeddings)
-    print(embeddings.shape)
-    x = x - 3
-    return embeddings
-
 
 # Set params for SentEval
 params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 2}
@@ -140,10 +98,16 @@ if __name__ == "__main__":
     else:
         print('no checkpoint path provided')
         print(args.checkpoint_path)
-    vocab_size = 33623
-    model = BOW(300, 512, 33623, 3)
-    state_dict = torch.load(args.checkpoint_path, map_location=torch.device('cpu'))
-    model.load_state_dict(state_dict, strict=False)
+
+    train_split = preprocess(split='dev')
+    vocab = create_vocab(train_split)
+    embeddings = align_vocab_with_glove(vocab)
+    labels = ['neutral', 'entailment', 'contradiction']
+    params_senteval['vocab'] = vocab
+    params_senteval['embeddings'] = embeddings
+    vocab_size = len(vocab.mapping)
+
+    model = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
 
     params_senteval['bow'] = model.to(device)
     se = senteval.engine.SE(params_senteval, batcher, prepare)
