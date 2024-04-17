@@ -35,12 +35,13 @@ Perform the following steps to obtain the glove embeddings.
 
 1. wget http://nlp.stanford.edu/data/glove.840B.300d.zip -P ./src/SentEval/pretrained
 2. unzip src/SentEval/pretrainedglove.840B.300d.zip -d ./src/SentEval/pretrained
-3. All files import glove file from pretrained/ folder in SentEval
+3. All files import glove file from **pretrained**/ folder in SentEval
 
 
 ### Pre-trained models
 
-Download weights folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
+Download **weights** folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
+
 Move weights folder in src/
 
 ## Code structure
@@ -48,36 +49,51 @@ Move weights folder in src/
 Src/ contains the following files for training and evaluating the models: 
 1. preprocess.py: contains all code for preprocessing and creating the datasets. Train.py and eval.py import functions from here
 2. train.py: for training the models with NLI
-3. eval.py: for evaluating the models
-4. utils.py: extra functionalities such as code for loading the models. 
+3. eval.py: for evaluating the models on transfer tasks + dev/test set of NLI
+4. utils.py: extra functions such as for loading the models and computing metrics
 
 ### train.py 
 
 The training of a model can be initialized with: 
 
 python -u train.py --model <model> --checkpoint_path <chekpoint_path> 
+
 Example: python -u train.py --model bilstm_max --checkpoint_path weights/bilstm/bilstm_max_best.pth
 
---model specifies which model to train: 
-Options: bow, lstm, bilstm, bilstm_max
+--**model** specifies which model to train: 
+Options: bow, lstm, bilstm (concatenation of final hidden states), bilstm_max (max pooling over the concatentation of hidden states)
 
 optional: 
+
 --checkpoint_path: initializes model from given checkpoint
+
 --batch_size: batch_size for training and evaluation, default: 64
+
 --lr: starting learning rate, default: 0.1
+
 --seed: default: 42
 
 ### Eval.py
 The evaluation of a model can be initialized with: 
 
 python -u eval.py --model <model> --checkpoint_path <chekpoint_path> 
+
 Example: python -u eval.py --model bilstm_max --checkpoint_path weights/bilstm/bilstm_max_best.pth
 
---model specifies which model to evaluate: 
-Options: bow, lstm, bilstm, bilstm_max
+--**model** specifies which model to evaluate: 
+Options: bow, lstm, bilstm, bilstm_max. Default: bow
 
 optional: 
---checkpoint_path: initializes model from given checkpoint
+
+--**eval_nli**: set to True if evaluation of dev and test set of NLI is desired. Default: false
+
+--**checkpoint_path**: initializes model from given checkpoint
+
+--batch_size: batch_size for training and evaluation, default: 64
+
+--seed: default: 42
+
+--device: evaluation on transfer tasks can be done on cpu. Eval_nli is always on gpu if available. Default: cpu
 
 
 
