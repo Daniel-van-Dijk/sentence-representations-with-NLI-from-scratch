@@ -73,12 +73,15 @@ def batcher(params, batch):
     embeddings = params.model.token_embeddings(padded_batch)
 
     if params['model_flag'] == 'bow':
-        return embeddings.mean(1)
+        representations = embeddings.mean(1)
+        return representations.detach().numpy()
 
     elif params['model_flag'] == 'lstm':
         packed = pack_padded_sequence(embeddings, lengths, batch_first=True, enforce_sorted=False)
         _, (u, _) = params.model.lstm(packed)
-        return u.squeeze(0)
+        representations = u.squeeze(0)
+        # avoid error:  Can't call numpy() on Tensor that requires grad
+        return representations.detach().numpy()
     
     elif params['model_flag'] == 'bilstm':
         packed = pack_padded_sequence(embeddings, lengths, batch_first=True, enforce_sorted=False)
