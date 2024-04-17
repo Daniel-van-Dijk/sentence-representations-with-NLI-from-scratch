@@ -35,12 +35,13 @@ Perform the following steps to obtain the glove embeddings.
 
 1. wget http://nlp.stanford.edu/data/glove.840B.300d.zip -P ./src/SentEval/pretrained
 2. unzip src/SentEval/pretrainedglove.840B.300d.zip -d ./src/SentEval/pretrained
-3. All files import glove file from pretrained/ folder in SentEval
+3. All files import glove file from **pretrained**/ folder in SentEval
 
 
 ### Pre-trained models
 
-Download weights folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
+Download **weights** folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
+
 Move weights folder in src/
 
 ## Code structure
