@@ -34,18 +34,42 @@ sys.path.insert(0, PATH_TO_SENTEVAL)
 import senteval
 
 def get_args_parser():
-    parser = argparse.ArgumentParser('Learning sentence representations via NLI', add_help=False)
+    parser = argparse.ArgumentParser('Evaluating sentence representations', add_help=False)
     parser.add_argument('--batch_size', default=64, type=int,
                         help='Batch size for training and evaluation')
     parser.add_argument('--model', default='bow', type=str, metavar='MODEL',
                         help='model to train')
     parser.add_argument('--checkpoint_path', type=str,
                         help='checkpoint path')
-    parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
-                        help='learning rate')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--device', default='cpu', type=str)
+    parser.add_argument('--eval_nli', default=False, type=bool)
     return parser
+
+def evaluate(model, dataloader, loss_module, device, model_flag):
+    """ 
+    For evaluating models on NLI dev and test set, also used in train.py
+    Returns loss and accuracy
+    """
+    model.eval()
+    val_loss = 0
+    total_preds, correct_preds = 0, 0
+    with torch.no_grad():
+        for i, (sent1s, sent2s, labels, lengths1, lengths2) in enumerate(dataloader, 0):
+            sent1s = sent1s.to(device)
+            sent2s = sent2s.to(device)
+            labels = labels.to(device)
+            if model_flag == 'bow':
+                output = model(sent1s,sent2s)
+
+            elif model_flag == 'lstm' or model_flag == 'bilstm' or model_flag == 'bilstm_max':
+                output = model(sent1s,lengths1, sent2s, lengths2)
+            predicted_labels = torch.argmax(output, dim=1)
+            correct_preds += (predicted_labels == labels).sum() 
+            total_preds += labels.shape[0]
+            output_val_loss = loss_module(output, labels)
+            val_loss += output_val_loss.item()
+    return val_loss / len(dataloader), correct_preds / total_preds
 
 def prepare(params, samples):
     """
@@ -87,13 +111,15 @@ def batcher(params, batch):
         packed = pack_padded_sequence(embeddings, lengths, batch_first=True, enforce_sorted=False)
         _, (u, _) = params.model.bilstm(packed)
         u = u.transpose(0, 1)
-        return u.reshape(u.shape[0], -1)
+        representations = u.reshape(u.shape[0], -1)
+        return representations.detach().numpy()
     
     elif params['model_flag'] == 'bilstm_max':
         packed = pack_padded_sequence(embeddings, lengths, batch_first=True, enforce_sorted=False)
         output, (_, _) = params.model.bilstm(packed)
         unpacked, _ = pad_packed_sequence(output, batch_first=True)
-        return torch.max(unpacked, dim=1)[0]
+        representations = torch.max(unpacked, dim=1)[0]
+        return representations.detach().numpy()
 
 # Set params for SentEval
 params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 10}
@@ -127,6 +153,38 @@ if __name__ == "__main__":
     vocab_size = len(vocab.mapping)
 
     model = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
+    
+
+    if args.eval_nli:
+        print(f'Evaluating {args.model} on NLI dev and test set')
+        # always try to evaluate NLI on gpu 
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        loss_module = nn.CrossEntropyLoss()
+
+        torch.manual_seed(args.seed)
+        model_nli = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
+        label_mapping = {label: index for index, label in enumerate(labels)}
+
+        validation_split = preprocess(split='dev')
+        validation_data = TextpairDataset(validation_split, vocab, label_mapping)
+        print(f'Validation set size: {len(validation_data)}')
+        validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=args.batch_size, shuffle=False, 
+                                                        collate_fn=custom_collate)
+        _, validation_accuracy = evaluate(model_nli, validation_loader, loss_module, device, args.model)
+        
+        test_split = preprocess(split='test')
+        test_data = TextpairDataset(test_split, vocab, label_mapping)
+        print(f'Test set size: {len(test_data)}')
+        test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size, shuffle=False, 
+                                                        collate_fn=custom_collate)
+        _, test_accuracy = evaluate(model_nli, test_loader, loss_module, device, args.model)
+
+        print("Validation accuracy on NLI:", validation_accuracy )
+        print("Test accuracy on NLI:", test_accuracy)
+
+        del model_nli
+
+
 
     params_senteval['model'] = model
     params_senteval['model_flag'] = args.model

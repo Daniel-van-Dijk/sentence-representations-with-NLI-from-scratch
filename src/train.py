@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from preprocess import *
+from utils import *
+from eval import *
 import os
 from torch.utils.tensorboard import SummaryWriter
 
@@ -29,60 +31,6 @@ def get_args_parser():
                         help='learning rate')
     parser.add_argument('--seed', default=42, type=int)
     return parser
-
-def load_model(embeddings, labels, vocab_size, device, model_flag='lstm', state_file_path = None):
-    embedding_dim = 300
-    hidden_dim = 512
-    print(f'loading {model_flag}')
-    if model_flag == 'lstm':
-        lstm_dim = 2048
-        model = LSTM_NLI(embedding_dim, lstm_dim, hidden_dim, vocab_size, len(labels))
-        
-    
-    elif model_flag == 'bilstm':
-        bilstm_dim = 2048
-        model = BiLSTM_NLI(embedding_dim, bilstm_dim, hidden_dim, vocab_size, len(labels))
-    
-    elif model_flag == 'bilstm_max':
-        bilstm_dim = 2048
-        model = BiLSTM_MaxPool_NLI(embedding_dim, bilstm_dim, hidden_dim, vocab_size, len(labels))
-
-        
-    elif model_flag == 'bow':
-        model = BOW(embedding_dim, hidden_dim, vocab_size, len(labels) )
-       
-
-    model.token_embeddings.weight.data.copy_(torch.from_numpy(embeddings))
-    # keep embeddings fixed during training
-    model.token_embeddings.weight.requires_grad = False
-    if state_file_path:
-        state_dict = torch.load(state_file_path)
-        model.load_state_dict(state_dict, strict=False)
-
-    model = model.to(device)
-    return model
-
-def evaluate(model, dataloader, loss_module, device, model_flag):
-    model.eval()
-    val_loss = 0
-    total_preds, correct_preds = 0, 0
-    with torch.no_grad():
-        for i, (sent1s, sent2s, labels, lengths1, lengths2) in enumerate(dataloader, 0):
-            sent1s = sent1s.to(device)
-            sent2s = sent2s.to(device)
-            labels = labels.to(device)
-            if model_flag == 'bow':
-                output = model(sent1s,sent2s)
-
-            elif model_flag == 'lstm' or model_flag == 'bilstm' or model_flag == 'bilstm_max':
-                output = model(sent1s,lengths1, sent2s, lengths2)
-            predicted_labels = torch.argmax(output, dim=1)
-            correct_preds += (predicted_labels == labels).sum() 
-            total_preds += labels.shape[0]
-            output_val_loss = loss_module(output, labels)
-            val_loss += output_val_loss.item()
-    return val_loss / len(dataloader), correct_preds / total_preds
-    
 
 def train(train_loader, validation_loader, model, loss_module, device, num_epochs=50, model_flag='bow'):
     writer = SummaryWriter(f'runs/{model_flag}/{TIME}')
