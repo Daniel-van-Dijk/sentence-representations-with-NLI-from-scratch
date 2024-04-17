@@ -33,7 +33,7 @@ Perform the following steps to obtain the glove embeddings.
 
 1. wget http://nlp.stanford.edu/data/glove.840B.300d.zip -P ./src/SentEval/pretrained
 2. unzip src/SentEval/pretrainedglove.840B.300d.zip -d ./src/SentEval/pretrained
-3. All files import glove from pretrained folder in SentEval
+3. All files import glove file from pretrained/ folder in SentEval
 
 
 ### Pre-trained models
@@ -43,7 +43,7 @@ Move weights folder in src/
 
 ## code structure
 
-Src/ contains four import files for training and evaluating the models: 
+Src/ contains the following files for training and evaluating the models: 
 1. preprocess.py: contains all code for preprocessing and creating the datasets. Train.py and eval.py import functions from here
 2. train.py: for training the models with NLI
 3. eval.py: for evaluating the models
