@@ -63,9 +63,13 @@ Example: python -u train.py --model bilstm_max --checkpoint_path weights/bilstm/
 Options: bow, lstm, bilstm (concatenation of final hidden states), bilstm_max (max pooling over the concatentation of hidden states)
 
 optional: 
+
 --checkpoint_path: initializes model from given checkpoint
+
 --batch_size: batch_size for training and evaluation, default: 64
+
 --lr: starting learning rate, default: 0.1
+
 --seed: default: 42
 
 ### Eval.py
@@ -79,10 +83,15 @@ Example: python -u eval.py --model bilstm_max --checkpoint_path weights/bilstm/b
 Options: bow, lstm, bilstm, bilstm_max. Default: bow
 
 optional: 
+
 --**eval_nli**: set to True if evaluation of dev and test set of NLI is desired. Default: false
+
 --**checkpoint_path**: initializes model from given checkpoint
+
 --batch_size: batch_size for training and evaluation, default: 64
+
 --seed: default: 42
+
 --device: evaluation on transfer tasks can be done on cpu. Eval_nli is always on gpu if available. Default: cpu
 
 
