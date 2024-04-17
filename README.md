@@ -56,6 +56,7 @@ Src/ contains the following files for training and evaluating the models:
 The training of a model can be initialized with: 
 
 python -u train.py --model <model> --checkpoint_path <chekpoint_path> 
+
 Example: python -u train.py --model bilstm_max --checkpoint_path weights/bilstm/bilstm_max_best.pth
 
 --**model** specifies which model to train: 
@@ -71,6 +72,7 @@ optional:
 The evaluation of a model can be initialized with: 
 
 python -u eval.py --model <model> --checkpoint_path <chekpoint_path> 
+
 Example: python -u eval.py --model bilstm_max --checkpoint_path weights/bilstm/bilstm_max_best.pth
 
 --**model** specifies which model to evaluate: 
