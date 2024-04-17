@@ -18,6 +18,8 @@ from models.bow import BOW
 from models.lstm import LSTM_NLI
 from models.bilstm import BiLSTM_NLI
 from models.bilstm_maxpool import BiLSTM_MaxPool_NLI
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 from utils import *
 
 # Set PATHs
@@ -64,29 +66,29 @@ def batcher(params, batch):
         padded_sent = sent_vec + [padding_ID] * (max_length - len(sent))
         sents.append(padded_sent), lengths.append(len(sent))
     padded_batch = torch.tensor(sents)
+    padded_batch = padded_batch.to(params.device)
     # get glove embeddings of sentence based on token ID's
     embeddings = params.model.token_embeddings(padded_batch)
 
     if params['model_flag'] == 'bow':
         return embeddings.mean(1)
-    
 
-    # print(embeddings.shape)
-    # mean_embeddings = embeddings.mean(1)
-    # print(mean_embeddings.shape)
-    # x = x - y
-    #     # !! only for bow
-    # embeddings_list.append(embeddings.mean(1))
-    # # stack sentence representations of batch -> batch size x dim
-    # embeddings_list = torch.vstack(embeddings_list)
-    # #print(embeddings_list.shape)
-    # # if embeddings_list.shape[0] != 128:
-    # #     print('error in batch dim')
-    # #     print(embeddings_list.shape)
-    # # if embeddings_list.shape[1] != 300:
-    # #     print('error in hidden dim')
-    # #     print(embeddings_list.shape)
-    # return embeddings_list
+    elif params['model_flag'] == 'lstm':
+        packed = pack_padded_sequence(embeddings, lengths, batch_first=True, enforce_sorted=False)
+        _, (u, _) = params.model.lstm(packed)
+        return u.squeeze(0)
+    
+    elif params['model_flag'] == 'bilstm':
+        packed = pack_padded_sequence(embeddings, lengths, batch_first=True, enforce_sorted=False)
+        _, (u, _) = params.model.bilstm(packed)
+        u = u.transpose(0, 1)
+        return u.reshape(u.shape[0], -1)
+    
+    elif params['model_flag'] == 'bilstm_max':
+        packed = pack_padded_sequence(embeddings, lengths, batch_first=True, enforce_sorted=False)
+        output, (_, _) = params.model.bilstm(packed)
+        unpacked, _ = pad_packed_sequence(output, batch_first=True)
+        return torch.max(unpacked, dim=1)[0]
 
 # Set params for SentEval
 params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 2}
@@ -97,10 +99,10 @@ params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 2}
 logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.DEBUG)
 
 if __name__ == "__main__":
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(device)
     args = get_args_parser()
     args = args.parse_args()
+    device = args.device
+    print('device', device)
     print(f'seed: {args.seed}')
     print(f'learning rate:  {args.lr}')
     print(f'model: {args.model}')
@@ -116,6 +118,7 @@ if __name__ == "__main__":
     labels = ['neutral', 'entailment', 'contradiction']
     params_senteval['vocab'] = vocab
     params_senteval['embeddings'] = embeddings
+    params_senteval['device'] = device
     vocab_size = len(vocab.mapping)
 
     # train_split = preprocess(split='tran')
@@ -132,29 +135,7 @@ if __name__ == "__main__":
     params_senteval['model'] = model
     params_senteval['model_flag'] = args.model
     se = senteval.engine.SE(params_senteval, batcher, prepare)
-    # transfer_tasks = ['STS12', 'STS13', 'STS14', 'STS15', 'STS16',
-    #                   'MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC',
-    #                   'SICKEntailment', 'SICKRelatedness', 'STSBenchmark',
-    #                   'Length', 'WordContent', 'Depth', 'TopConstituents',
-    #                   'BigramShift', 'Tense', 'SubjNumber', 'ObjNumber',
-    #                   'OddManOut', 'CoordinationInversion']
-    
-    # transfer_tasks = ['STS12', 'STS13', 'STS14', 'STS15', 'STS16',
-    #                     'CR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC',
-    #                 'SICKEntailment', 'SICKRelatedness', 'STSBenchmark',
-    #                 'Length', 'WordContent', 'Depth', 'TopConstituents',
-    #                 'BigramShift', 'Tense', 'SubjNumber', 'ObjNumber',
-    #                 'OddManOut', 'CoordinationInversion']
-
-     # here you define the NLP taks that your embedding model is going to be evaluated
-    # in (https://arxiv.org/abs/1802.05883) we use the following :
-    # SICKRelatedness (Sick-R) needs torch cuda to work (even when using logistic regression), 
-    # but STS14 (semantic textual similarity) is a similar type of semantic task
-    #transfer_tasks = ['MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'TREC',
-    #                  'MRPC', 'SICKEntailment', 'STS14']
-    #transfer_tasks = ['MR', 'CR']
-    
-    transfer_tasks = ['MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'TREC', 'MRPC', 'SICKEntailment', 'STS14', 'SNLI']
+    transfer_tasks = ['MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'TREC', 'MRPC', 'SICKEntailment', 'STS14', 'SICKRelatedness']
 
     # senteval prints the results and returns a dictionary with the scores
     results = se.eval(transfer_tasks)
