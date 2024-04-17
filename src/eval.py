@@ -42,6 +42,7 @@ def get_args_parser():
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate')
     parser.add_argument('--seed', default=42, type=int)
+    parser.add_argument('--device', default='cpu', type=str)
     return parser
 
 
@@ -109,22 +110,22 @@ if __name__ == "__main__":
         print('no checkpoint path provided')
         print(args.checkpoint_path)
 
-    # train_split = preprocess(split='train')
-    # vocab = create_vocab(train_split)
-    # embeddings = align_vocab_with_glove(vocab)
-    # labels = ['neutral', 'entailment', 'contradiction']
-    # params_senteval['vocab'] = vocab
-    # params_senteval['embeddings'] = embeddings
-    # vocab_size = len(vocab.mapping)
-
-    train_split = preprocess(split='dev')
+    train_split = preprocess(split='train')
     vocab = create_vocab(train_split)
-    #embeddings = align_vocab_with_glove(vocab)
+    embeddings = align_vocab_with_glove(vocab)
     labels = ['neutral', 'entailment', 'contradiction']
     params_senteval['vocab'] = vocab
-    embeddings = np.random.rand(9842, 300)
     params_senteval['embeddings'] = embeddings
-    vocab_size = 9842
+    vocab_size = len(vocab.mapping)
+
+    # train_split = preprocess(split='tran')
+    # vocab = create_vocab(train_split)
+    # #embeddings = align_vocab_with_glove(vocab)
+    # labels = ['neutral', 'entailment', 'contradiction']
+    # params_senteval['vocab'] = vocab
+    # embeddings = np.random.rand(9842, 300)
+    # params_senteval['embeddings'] = embeddings
+    # vocab_size = 9842
 
     model = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
 
@@ -151,7 +152,10 @@ if __name__ == "__main__":
     # but STS14 (semantic textual similarity) is a similar type of semantic task
     #transfer_tasks = ['MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'TREC',
     #                  'MRPC', 'SICKEntailment', 'STS14']
-    transfer_tasks = ['MR', 'CR']
+    #transfer_tasks = ['MR', 'CR']
+    
+    transfer_tasks = ['MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'TREC', 'MRPC', 'SICKEntailment', 'STS14', 'SNLI']
+
     # senteval prints the results and returns a dictionary with the scores
     results = se.eval(transfer_tasks)
     print(results)
