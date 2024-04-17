@@ -13,7 +13,7 @@
 ```
 The environment can be installed with: "conda env create -f env.yml"
 
-### Data
+## Necessary datasets  
 
 #### Natural language inference (NLI) data
 
@@ -28,6 +28,8 @@ Perform the following steps to obtain the data used for training the sentence en
 The datasets for the transfer tasks can be obtained by running in SentEval/data/downstream/:
 ./get_transfer_data.bash
 
+## Model requirements
+
 ### Glove embeddings
 Perform the following steps to obtain the glove embeddings. 
 
@@ -41,7 +43,7 @@ Perform the following steps to obtain the glove embeddings.
 Download weights folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
 Move weights folder in src/
 
-## code structure
+## Code structure
 
 Src/ contains the following files for training and evaluating the models: 
 1. preprocess.py: contains all code for preprocessing and creating the datasets. Train.py and eval.py import functions from here
@@ -49,8 +51,7 @@ Src/ contains the following files for training and evaluating the models:
 3. eval.py: for evaluating the models
 4. utils.py: extra functionalities such as code for loading the models. 
 
-## train.py 
-
+### train.py 
 
 The training of a model can be initialized with: 
 
