@@ -47,8 +47,10 @@ def get_args_parser():
     parser.add_argument('--device', default='cpu', type=str)
     return parser
 
-
 def prepare(params, samples):
+    """
+    Prepare function is not used since vocabulary of NLI is taken
+    """
     return
 
 
@@ -91,7 +93,7 @@ def batcher(params, batch):
         return torch.max(unpacked, dim=1)[0]
 
 # Set params for SentEval
-params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 2}
+params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 10}
 # params_senteval['classifier'] = {'nhid': 0, 'optim': 'rmsprop', 'batch_size': 128,
 #                                  'tenacity': 3, 'epoch_size': 2}
 
@@ -121,15 +123,6 @@ if __name__ == "__main__":
     params_senteval['device'] = device
     vocab_size = len(vocab.mapping)
 
-    # train_split = preprocess(split='tran')
-    # vocab = create_vocab(train_split)
-    # #embeddings = align_vocab_with_glove(vocab)
-    # labels = ['neutral', 'entailment', 'contradiction']
-    # params_senteval['vocab'] = vocab
-    # embeddings = np.random.rand(9842, 300)
-    # params_senteval['embeddings'] = embeddings
-    # vocab_size = 9842
-
     model = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
 
     params_senteval['model'] = model
@@ -140,3 +133,31 @@ if __name__ == "__main__":
     # senteval prints the results and returns a dictionary with the scores
     results = se.eval(transfer_tasks)
     print(results)
+
+    print('================================================================')
+    print(f"Calculating micro and macro average for {args.model}")
+    print("\n")
+
+    micro, macro, num_tasks, num_samples = 0, 0, 0, 0
+    for task in results:
+        # only tasks that have accuracy as metric
+        if 'devacc' in results[task]:
+            macro += results[task]['devacc']
+            # weight by number of samples
+            micro += (results[task]['devacc'] * results[task]['ndev'])
+            num_tasks += 1
+            num_samples += results[task]['ndev']
+    macro /= num_tasks
+    micro /= num_samples
+
+    
+    print('macro accuracy', macro)
+    print('micro accuracy', micro)
+
+    print('============')
+    print("STS14 results")
+    print(results['STS14']['all'])
+    print('----')
+    print('============')
+    print("SICKRelatedness results")
+    print(results['SICKRelatedness'])

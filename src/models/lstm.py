@@ -10,8 +10,6 @@ class LSTM_NLI(nn.Module):
         self.token_embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.lstm = nn.LSTM(input_size=embedding_dim, hidden_size=lstm_dim, batch_first=True)
         # dim * 4 as we concatenate 4 vectors: u, v, |u - v|, u*v
-        #self.linear1 = nn.Linear(lstm_dim*4, hidden_dim)
-        #self.linear2 = nn.Linear(hidden_dim, num_labels)
         self.mlp = nn.Sequential(
             nn.Linear(lstm_dim*4, hidden_dim),
             nn.Linear(hidden_dim, hidden_dim),

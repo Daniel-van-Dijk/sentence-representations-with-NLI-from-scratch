@@ -10,8 +10,6 @@ class BiLSTM_NLI(nn.Module):
         self.token_embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.bilstm = nn.LSTM(input_size=embedding_dim, hidden_size=bilstm_dim, batch_first=True, bidirectional=True)
         # dim * 8 as we concatenate 4 concatenated 4096-dim (from 2 directions) vectors : u, v, |u - v|, u*v
-        #self.linear1 = nn.Linear(bilstm_dim*8, hidden_dim)
-        #self.linear2 = nn.Linear(hidden_dim, num_labels)
         self.mlp = nn.Sequential(
             nn.Linear(bilstm_dim*8, hidden_dim),
             nn.Linear(hidden_dim, hidden_dim),
@@ -24,7 +22,7 @@ class BiLSTM_NLI(nn.Module):
         # pack padded variable input
         packed1 = pack_padded_sequence(embeds1, lengths1, batch_first=True, enforce_sorted=False)
         packed2 = pack_padded_sequence(embeds2, lengths2, batch_first=True, enforce_sorted=False)
-
+        # use final hidden states  
         _, (u, _) = self.bilstm(packed1)
         _, (v, _) = self.bilstm(packed2)
         # [2, 64, 2048] -> [64, 2, 2048]

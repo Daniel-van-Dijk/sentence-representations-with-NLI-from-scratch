@@ -5,8 +5,6 @@ class BOW(nn.Module):
     def __init__(self, embedding_dim, hidden_dim, vocab_size, num_labels):
         super(BOW, self).__init__()
         self.token_embeddings = nn.Embedding(vocab_size, embedding_dim)
-        #self.linear1 = nn.Linear(embedding_dim*4, hidden_dim)
-        #self.linear2 = nn.Linear(hidden_dim, num_labels)
         # dim * 4 as we concatenate 4 vectors: u, v, |u - v|, u*v
         self.mlp = nn.Sequential(
             nn.Linear(embedding_dim*4, hidden_dim),
