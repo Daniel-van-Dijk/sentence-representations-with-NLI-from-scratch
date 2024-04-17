@@ -46,3 +46,17 @@ def get_metrics(results):
     micro /= num_samples
     macro /= num_tasks
     return micro, macro
+
+
+def save_file(file, filename):
+    path = f'saved_files/{filename}'
+    print(path)
+    with open(path, 'wb') as f:
+        pickle.dump(file, f)
+
+def load_file(filename):
+    path = f'saved_files/{filename}'
+    print(path)
+    with open(path, 'rb') as f:
+        file = pickle.load(f)
+    return file

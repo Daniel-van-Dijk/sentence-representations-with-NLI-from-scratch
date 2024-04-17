@@ -1,5 +1,5 @@
 import json
-import spacy
+import pickle
 import time
 import os
 from spacy.lang.en import English
@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 import torch.nn as nn
+from utils import save_file, load_file
 
 def read_json(split='train'):
     data = []
@@ -20,16 +21,11 @@ def read_json(split='train'):
 
 def preprocess(split='train'):
     """lowering and tokenization of sentences"""
-
     nlp = English()
     tokenizer = nlp.tokenizer
     data = read_json(split)
     preprocessed = []
-
-    # TODO: ask "-"? labels = ['neutral', 'entailment', 'contradiction', '-']
     labels = ['neutral', 'entailment', 'contradiction']
-    start = time.time()
-  
     for pair in data:
         if pair['gold_label'] in labels:
             sent1 = list(tokenizer(pair['sentence1'].lower()))
@@ -37,8 +33,6 @@ def preprocess(split='train'):
             preprocessed.append({'sentence_1' : sent1, 
                                 'sentence_2' : sent2, 
                                 'gold_label' : pair['gold_label']})
-    end = time.time()
-    print(f" It took {(end - start):.2f} seconds to tokenize {split} split")
     return preprocessed
 
 class Vocabulary:
@@ -70,7 +64,7 @@ def create_vocab(dataset):
   return v
 
 
-def align_vocab_with_glove(data_vocab, embeddings_file='glove_NLI_embeddings.npy'):
+def align_vocab_with_glove(data_vocab, embeddings_file='saved_files/glove_NLI_embeddings.npy'):
     glove_dim = 300
     if os.path.exists(embeddings_file):
       embeddings = np.load(embeddings_file)
@@ -79,7 +73,6 @@ def align_vocab_with_glove(data_vocab, embeddings_file='glove_NLI_embeddings.npy
     # create zero's embedding matrix of size (vocab_size, glove_dim) 
     # vocab tokens not in glove will keep zero embeddings
     embeddings = np.zeros((len(data_vocab.mapping), glove_dim))
-    start = time.time()
     with open("./SentEval/pretrained/glove.840B.300d.txt", 'r') as glove:
       for line in glove:
         # token is first element of line
@@ -91,8 +84,6 @@ def align_vocab_with_glove(data_vocab, embeddings_file='glove_NLI_embeddings.npy
             token_ID = data_vocab.mapping[token]
             # use token ID as row index in embedding matrix, convert string to float
             embeddings[token_ID, :] = np.array(glove_embedding, dtype=np.float32)
-    end = time.time()
-    print(f" It took {(end - start):.2f} seconds to align vocab with glove")
     np.save(embeddings_file, embeddings)
     print("saved embeddings")
     return embeddings
