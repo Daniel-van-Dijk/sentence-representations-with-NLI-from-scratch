@@ -48,43 +48,44 @@ def get_args_parser():
 def prepare(params, samples):
     return
 
-# # SentEval prepare and batcher
-# def prepare(params, samples):
-#     train_split = preprocess(split='train')
-#     #vocab = create_vocab(train_split)
-#     #embeddings = align_vocab_with_glove(vocab)
-#     params.vocab = create_vocab(train_split)
-#     params.embeddings = align_vocab_with_glove(params.vocab)
-#     #_, params.word2id = create_dictionary(samples)
-#     #params.word_vec = get_wordvec(PATH_TO_VEC, params.word2id)
-#     params.wvec_dim = 300
-#     return
 
 def batcher(params, batch):
     batch = [sent if sent != [] else ['.'] for sent in batch]
-    #print('batch size', len(batch))
-    if len(batch) != 128:
-        print('ALERT')
-    embeddings_list = []
+    max_length = max(len(sent) for sent in batch)
+    padding_ID = 1
+    sents, lengths = [], []
     for sent in batch:
         sent_vec = []
         for token in sent:
             # get token ID's based on NLI vocab, unknown to 0 (<unk>)
             sent_vec.append(params.vocab.mapping.get(token, 0))
-        # get glove embeddings of sentence based on token ID's
-        embeddings = params.bow.token_embeddings(torch.LongTensor([sent_vec]))
-        # !! only for bow
-        embeddings_list.append(embeddings.mean(1))
-    # stack sentence representations of batch -> batch size x dim
-    embeddings_list = torch.vstack(embeddings_list)
-    #print(embeddings_list.shape)
-    if embeddings_list.shape[0] != 128:
-        print('error in batch dim')
-        print(embeddings_list.shape)
-    if embeddings_list.shape[1] != 300:
-        print('error in hidden dim')
-        print(embeddings_list.shape)
-    return embeddings_list
+        # pad sentence to max length of batch
+        padded_sent = sent_vec + [padding_ID] * (max_length - len(sent))
+        sents.append(padded_sent), lengths.append(len(sent))
+    padded_batch = torch.tensor(sents)
+    # get glove embeddings of sentence based on token ID's
+    embeddings = params.model.token_embeddings(padded_batch)
+
+    if params['model_flag'] == 'bow':
+        return embeddings.mean(1)
+    
+
+    # print(embeddings.shape)
+    # mean_embeddings = embeddings.mean(1)
+    # print(mean_embeddings.shape)
+    # x = x - y
+    #     # !! only for bow
+    # embeddings_list.append(embeddings.mean(1))
+    # # stack sentence representations of batch -> batch size x dim
+    # embeddings_list = torch.vstack(embeddings_list)
+    # #print(embeddings_list.shape)
+    # # if embeddings_list.shape[0] != 128:
+    # #     print('error in batch dim')
+    # #     print(embeddings_list.shape)
+    # # if embeddings_list.shape[1] != 300:
+    # #     print('error in hidden dim')
+    # #     print(embeddings_list.shape)
+    # return embeddings_list
 
 # Set params for SentEval
 params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 2}
@@ -108,17 +109,27 @@ if __name__ == "__main__":
         print('no checkpoint path provided')
         print(args.checkpoint_path)
 
-    train_split = preprocess(split='train')
+    # train_split = preprocess(split='train')
+    # vocab = create_vocab(train_split)
+    # embeddings = align_vocab_with_glove(vocab)
+    # labels = ['neutral', 'entailment', 'contradiction']
+    # params_senteval['vocab'] = vocab
+    # params_senteval['embeddings'] = embeddings
+    # vocab_size = len(vocab.mapping)
+
+    train_split = preprocess(split='dev')
     vocab = create_vocab(train_split)
-    embeddings = align_vocab_with_glove(vocab)
+    #embeddings = align_vocab_with_glove(vocab)
     labels = ['neutral', 'entailment', 'contradiction']
     params_senteval['vocab'] = vocab
+    embeddings = np.random.rand(9842, 300)
     params_senteval['embeddings'] = embeddings
-    vocab_size = len(vocab.mapping)
+    vocab_size = 9842
 
     model = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
 
-    params_senteval['bow'] = model
+    params_senteval['model'] = model
+    params_senteval['model_flag'] = args.model
     se = senteval.engine.SE(params_senteval, batcher, prepare)
     # transfer_tasks = ['STS12', 'STS13', 'STS14', 'STS15', 'STS16',
     #                   'MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'SST5', 'TREC', 'MRPC',
