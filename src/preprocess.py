@@ -88,9 +88,6 @@ def align_vocab_with_glove(data_vocab, embeddings_file='saved_files/glove_NLI_em
     print("saved embeddings")
     return embeddings
 
-# print(align_vocab_with_glove(v))
-
-
 class TextpairDataset(Dataset):
     def __init__(self, dataset, vocab, label_mapping):
         self.dataset = dataset

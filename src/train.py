@@ -17,6 +17,7 @@ import datetime
 import argparse
 # for logging
 TIME = datetime.datetime.now()
+import copy
 
 
 def get_args_parser():
@@ -41,7 +42,7 @@ def train(train_loader, validation_loader, model, loss_module, device, num_epoch
     # learning rate * 0.99 after every epoch
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.99)
     last_validation_accuracy = 0
-    
+    best_val_loss = float('inf')
     for epoch in range(num_epochs):
         model.train()
         train_loss = 0
@@ -61,15 +62,22 @@ def train(train_loader, validation_loader, model, loss_module, device, num_epoch
             output_loss.backward()
             optimizer.step()
 
-            # adapted from: https://pytorch.org/tutorials/intermediate/tensorboard_tutorial.html
-            if i % 250 == 249:    # every 250 mini-batches
-                writer.add_scalar('training loss',
-                                train_loss / 250,
-                                epoch * len(train_loader) + i)
         validation_loss, validation_accuracy = evaluate(model, validation_loader, loss_module, device, model_flag)
         
-        print(f'avg training loss at epoch {epoch}: {validation_loss}')
+        # saving model with lowest validation loss
+        if validation_loss < best_val_loss:
+            best_val_loss = validation_loss
+            # deep copy to not affect training loop
+            sd = copy.deepcopy(model.state_dict())
+            del sd['token_embeddings.weight']
+            torch.save(sd, f'{weights_folder}/{model_flag}_best_{TIME}.pth')
+
+        avg_train_loss = train_loss / len(train_loader)
+        print(f'avg training loss at epoch {epoch}: {avg_train_loss}')
+        print(f'avg validation loss at epoch {epoch}: {validation_loss}')
         print(f'Validation accuracy at epoch {epoch}: {validation_accuracy }%')
+        # tensorboard logging
+        writer.add_scalar("Loss/train", avg_train_loss, epoch)
         writer.add_scalar("Loss/validation", validation_loss, epoch)
         writer.add_scalar("Accuracy/validation", validation_accuracy, epoch)
         if validation_accuracy < last_validation_accuracy:
@@ -103,9 +111,16 @@ def main(args):
     label_mapping = {label: index for index, label in enumerate(labels)}
 
     train_split = preprocess(split='train')
-    vocab = create_vocab(train_split)
+    vocab_file = 'NLI_vocab.pkl'
+    folder = 'saved_files'
+    if os.path.exists(f'{folder}/{vocab_file}'):
+        print('loading vocab from file')
+        vocab = load_file(vocab_file)
+    else:
+        print('creating vocab with training set')
+        vocab = create_vocab(train_split)
+        save_file(vocab, vocab_file)
     embeddings = align_vocab_with_glove(vocab)
-    #embeddings = np.random.rand(33623, 300)
 
     # TextpairDataset and custom_collate function in preprocess.py
     train_data = TextpairDataset(train_split, vocab, label_mapping)
@@ -120,7 +135,6 @@ def main(args):
     validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=args.batch_size, shuffle=False, collate_fn=custom_collate)
     vocab_size = len(vocab.mapping)
     print(f'size of vocab: {vocab_size}')
-    #vocab_size = 33623
     loss_module = nn.CrossEntropyLoss()
     model = load_model(embeddings, labels, vocab_size, device, args.model, args.checkpoint_path)
     train(train_loader, validation_loader, model, loss_module, device, model_flag=args.model)

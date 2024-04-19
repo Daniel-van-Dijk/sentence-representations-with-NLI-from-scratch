@@ -135,7 +135,6 @@ if __name__ == "__main__":
     device = args.device
     print('device', device)
     print(f'seed: {args.seed}')
-    print(f'learning rate:  {args.lr}')
     print(f'model: {args.model}')
     if args.checkpoint_path:
         print(f'loading checkpoint from {args.checkpoint_path}')
