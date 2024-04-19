@@ -22,5 +22,4 @@ class BOW(nn.Module):
         dotprod = u * v
         combined = torch.hstack([u, v, diff, dotprod])
         logits = self.mlp(combined)
-        output = F.softmax(logits, dim=1)
-        return output
+        return logits

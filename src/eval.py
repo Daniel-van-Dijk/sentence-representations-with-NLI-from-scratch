@@ -79,7 +79,7 @@ def prepare(params, samples):
 
 
 def batcher(params, batch):
-    batch = [sent if sent != [] else ['.'] for sent in batch]
+    batch = [sent if len(sent) > 0 else ['.'] for sent in batch]
     max_length = max(len(sent) for sent in batch)
     padding_ID = 1
     sents, lengths = [], []
@@ -123,8 +123,6 @@ def batcher(params, batch):
 
 # Set params for SentEval
 params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': False, 'kfold': 10}
-# params_senteval['classifier'] = {'nhid': 0, 'optim': 'rmsprop', 'batch_size': 128,
-#                                  'tenacity': 3, 'epoch_size': 2}
 
 # Set up logger
 logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.DEBUG)
@@ -143,8 +141,17 @@ if __name__ == "__main__":
         print(args.checkpoint_path)
 
     train_split = preprocess(split='train')
-    vocab = create_vocab(train_split)
+    vocab_file = 'NLI_vocab.pkl'
+    folder = 'saved_files'
+    if os.path.exists(f'{folder}/{vocab_file}'):
+        print('loading vocab from file')
+        vocab = load_file(vocab_file)
+    else:
+        print('creating vocab with training set')
+        vocab = create_vocab(train_split)
+        save_file(vocab, vocab_file)
     embeddings = align_vocab_with_glove(vocab)
+
     labels = ['neutral', 'entailment', 'contradiction']
     params_senteval['vocab'] = vocab
     params_senteval['embeddings'] = embeddings
@@ -189,7 +196,6 @@ if __name__ == "__main__":
     params_senteval['model_flag'] = args.model
     se = senteval.engine.SE(params_senteval, batcher, prepare)
     transfer_tasks = ['MR', 'CR', 'MPQA', 'SUBJ', 'SST2', 'TREC', 'MRPC', 'SICKEntailment', 'STS14', 'SICKRelatedness']
-
     # senteval prints the results and returns a dictionary with the scores
     results = se.eval(transfer_tasks)
     print(results)

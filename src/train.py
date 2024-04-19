@@ -66,6 +66,8 @@ def train(train_loader, validation_loader, model, loss_module, device, num_epoch
         
         # saving model with lowest validation loss
         if validation_loss < best_val_loss:
+            print(f'New best validation_loss: {validation_loss}')
+            print(f'Saving current best model with accuracy {validation_accuracy}')
             best_val_loss = validation_loss
             # deep copy to not affect training loop
             sd = copy.deepcopy(model.state_dict())
