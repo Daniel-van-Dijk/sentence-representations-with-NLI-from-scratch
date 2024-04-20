@@ -4,6 +4,7 @@ from models.bow import BOW
 from models.lstm import LSTM_NLI
 from models.bilstm import BiLSTM_NLI
 from models.bilstm_maxpool import BiLSTM_MaxPool_NLI
+from models.lstm_maxpool import LSTM_MaxPool_NLI
 
 def load_model(embeddings, labels, vocab_size, device, model_flag='lstm', state_file_path = None):
     embedding_dim = 300
@@ -12,6 +13,9 @@ def load_model(embeddings, labels, vocab_size, device, model_flag='lstm', state_
     if model_flag == 'lstm':
         lstm_dim = 2048
         model = LSTM_NLI(embedding_dim, lstm_dim, hidden_dim, vocab_size, len(labels))
+    elif model_flag == 'lstm_max':
+        lstm_dim = 2048
+        model = LSTM_MaxPool_NLI(embedding_dim, lstm_dim, hidden_dim, vocab_size, len(labels))
     elif model_flag == 'bilstm':
         bilstm_dim = 2048
         model = BiLSTM_NLI(embedding_dim, bilstm_dim, hidden_dim, vocab_size, len(labels))

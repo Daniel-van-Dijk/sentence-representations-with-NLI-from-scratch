@@ -55,7 +55,7 @@ def train(train_loader, validation_loader, model, loss_module, device, num_epoch
             if model_flag == 'bow':
                 output = model(sent1s,sent2s)
 
-            elif model_flag == 'lstm' or model_flag == 'bilstm' or model_flag == 'bilstm_max':
+            elif model_flag == 'lstm' or model_flag == 'lstm_max' or model_flag == 'bilstm' or model_flag == 'bilstm_max':
                 output = model(sent1s,lengths1, sent2s, lengths2)
             output_loss = loss_module(output, labels)
             train_loss += output_loss.item()

@@ -62,7 +62,7 @@ def evaluate(model, dataloader, loss_module, device, model_flag):
             if model_flag == 'bow':
                 output = model(sent1s,sent2s)
 
-            elif model_flag == 'lstm' or model_flag == 'bilstm' or model_flag == 'bilstm_max':
+            elif model_flag == 'lstm' or model_flag == 'lstm_max' or model_flag == 'bilstm' or model_flag == 'bilstm_max':
                 output = model(sent1s,lengths1, sent2s, lengths2)
             predicted_labels = torch.argmax(output, dim=1)
             correct_preds += (predicted_labels == labels).sum() 
@@ -117,6 +117,13 @@ def batcher(params, batch):
     elif params['model_flag'] == 'bilstm_max':
         packed = pack_padded_sequence(embeddings, lengths, batch_first=True, enforce_sorted=False)
         output, (_, _) = params.model.bilstm(packed)
+        unpacked, _ = pad_packed_sequence(output, batch_first=True)
+        representations = torch.max(unpacked, dim=1)[0]
+        return representations.detach().numpy()
+         
+    elif params['model_flag'] == 'lstm_max':
+        packed = pack_padded_sequence(embeddings, lengths, batch_first=True, enforce_sorted=False)
+        output, (_, _) = params.model.lstm(packed)
         unpacked, _ = pad_packed_sequence(output, batch_first=True)
         representations = torch.max(unpacked, dim=1)[0]
         return representations.detach().numpy()
