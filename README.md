@@ -91,7 +91,7 @@ optional:
 
 --seed: default: 42
 
-### Eval.py
+### eval.py
 The evaluation of a model can be initialized with: 
 
 python -u eval.py --model <model> --checkpoint_path <chekpoint_path> 
