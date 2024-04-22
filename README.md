@@ -40,9 +40,24 @@ Perform the following steps to obtain the glove embeddings.
 
 ### Pre-trained models
 
+
 Download **weights** folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
 
+Folder contains weights for the following models: 
+
+1.'bow': for the bag of words model, where glove embeddings of the sequence are averaged to obtain sentence representations.
+
+2. 'lstm': for the LSTM model where the final hidden state is used as a sentence representation.
+
+3. 'lstm_max': for the LSTM model with max pooling over the hidden states of the sequence (for extra research question). 
+
+4. 'bilstm': for the BiLSTM model where the concatenation of the final hidden states (of the forward and backward LSTM) is used as sentence representation.
+
+5. 'bilstm_max': the BiLSTM model with max pooling over the concatenated hidden states (of forward and backward LSTM) of the sequence. 
+
 Move weights folder in src/
+
+
 
 ## Code structure
 
@@ -51,6 +66,7 @@ Src/ contains the following files for training and evaluating the models:
 2. train.py: for training the models with NLI
 3. eval.py: for evaluating the models on transfer tasks + dev/test set of NLI
 4. utils.py: extra functions such as for loading the models and computing metrics
+5. demo.ipynb: for experimenting with the pre-trained models: new samples, extracting predictions on test set and experiment with varying input length 
 
 ### train.py 
 
