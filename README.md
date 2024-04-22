@@ -45,7 +45,7 @@ Download **weights** folder with pretrained models here: https://drive.google.co
 
 Folder contains weights for the following models: 
 
-1.'bow': for the bag of words model, where glove embeddings of the sequence are averaged to obtain sentence representations.
+1. 'bow': for the bag of words model, where glove embeddings of the sequence are averaged to obtain sentence representations.
 
 2. 'lstm': for the LSTM model where the final hidden state is used as a sentence representation.
 
