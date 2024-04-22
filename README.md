@@ -43,7 +43,7 @@ Perform the following steps to obtain the glove embeddings.
 
 Download **weights** folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
 
-Folder contains weights for the following models: 
+Folder contains weights **and** tensorboard files of training runs for the following models: 
 
 1. 'bow': for the bag of words model, where glove embeddings of the sequence are averaged to obtain sentence representations.
 
