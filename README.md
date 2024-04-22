@@ -41,7 +41,9 @@ Perform the following steps to obtain the glove embeddings.
 ### Pre-trained models
 
 
-Download **weights** folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
+- Download **weights** folder with pretrained models here: https://drive.google.com/drive/folders/1tv-pQ7J2LAA2HXf6uThkaN8JbMa9JDIu?usp=sharing
+- Move weights folder in src/
+
 
 Folder contains weights **and** tensorboard files of training runs for the following models: 
 
@@ -55,7 +57,7 @@ Folder contains weights **and** tensorboard files of training runs for the follo
 
 5. 'bilstm_max': the BiLSTM model with max pooling over the concatenated hidden states (of forward and backward LSTM) of the sequence. 
 
-Move weights folder in src/
+
 
 
 
