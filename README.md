@@ -65,7 +65,7 @@ Src/ contains the following files for training and evaluating the models:
 1. preprocess.py: contains all code for preprocessing and creating the datasets. Train.py and eval.py import functions from here
 2. train.py: for training the models with NLI
 3. eval.py: for evaluating the models on transfer tasks + dev/test set of NLI
-4. utils.py: extra functions such as for loading the models and computing metrics
+4. utils.py: extra functions such as for loading the models, computing metrics and saving/loading json files
 5. demo.ipynb: for experimenting with the pre-trained models: new samples, extracting predictions on test set and experiment with varying input length 
 
 ### train.py 
